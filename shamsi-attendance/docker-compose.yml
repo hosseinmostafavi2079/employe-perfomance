@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  # نام سرویس پایگاه داده ما
+  attendance-db:
+    image: postgres:16-alpine
+    container_name: shamsi-attendance-db
+    environment:
+      - POSTGRES_USER=attendance_admin
+      - POSTGRES_PASSWORD=shamsi_secure_pass_2026
+      - POSTGRES_DB=shamsi_attendance_platform
+    ports:
+      # پورت سمت راست (5432) پورت داخلی داکر است و نیازی به تغییر ندارد.
+      # پورت سمت چپ (5433) پورت سیستم شماست که آن را تغییر دادیم تا با پروژه قبلی تداخل نکند.
+      - "5433:5432"
+    volumes:
+      # ایجاد یک هارد دیسک مجازی اختصاصی برای این پروژه بدون دست زدن به بقیه داده‌ها
+      - attendance_postgres_data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  # تعریف نام هارد دیسک مجازی به صورت مجزا
+  attendance_postgres_data:

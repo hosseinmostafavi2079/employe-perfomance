@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ورود به سامانه جامع کارکرد</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @font-face {
+            font-family: 'IRANSansWeb';
+            src: url('/static/fonts/IRANSansWeb_Medium.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        body { font-family: 'IRANSansWeb', sans-serif; }
+    </style>
+</head>
+<body class="bg-zinc-100 text-zinc-800 min-h-screen flex items-center justify-center px-4">
+
+    <div class="max-w-md w-full bg-white p-8 rounded-3xl border border-zinc-200 shadow-xl space-y-6">
+        <div class="text-center space-y-2">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white text-xl mx-auto shadow-md shadow-indigo-100">🔐</div>
+            <h2 class="text-xl font-black text-zinc-900 tracking-tight">ورود به سامانه کارکرد شمسی</h2>
+            <p class="text-xs text-zinc-400 leading-relaxed">نام کاربری و کلمه عبور سازمانی خود را وارد نمایید.</p>
+        </div>
+        
+        {{if .Message}}
+        <div class="p-3 bg-red-50 border border-red-100 text-red-600 rounded-xl text-xs font-bold text-center animate-bounce">
+            ⚠️ {{.Message}}
+        </div>
+        {{end}}
+
+        <form action="/login" method="POST" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-zinc-500 mb-1.5">کد پرسنلی / نام کاربری</label>
+                <input type="text" name="username" placeholder="مثلاً EMP-1001 یا ADMIN" required class="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 text-center font-bold tracking-wide">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-zinc-500 mb-1.5">کلمه عبور امن</label>
+                <input type="password" name="password" placeholder="••••••••" required class="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 text-center font-bold tracking-wide">
+            </div>
+            <button type="submit" class="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-3 rounded-xl transition text-sm shadow-md">ورود امن به پورتال اختصاصی</button>
+        </form>
+    </div>
+
+</body>
+</html>
