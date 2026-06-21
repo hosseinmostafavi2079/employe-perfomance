@@ -3,115 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🛡️ کنترل پنل مدیریت ارشد سازمان</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>کنترل پنل مدیریت ارشد سازمان</title>
     <link rel="stylesheet" href="https://unpkg.com/@majidhajian/jalali-datepicker/dist/jalali-datepicker.min.css">
-    <script src="https://unpkg.com/@majidhajian/jalali-datepicker/dist/jalali-datepicker.min.js"></script>
-    <style>
-        @font-face { font-family: 'IRANSansWeb'; src: url('/static/fonts/IRANSansWeb_Medium.ttf') format('truetype'); font-weight: normal; font-style: normal; }
-        @font-face { font-family: 'IRANSansWeb'; src: url('/static/fonts/IRANSansWeb_Bold.ttf') format('truetype'); font-weight: bold; font-style: normal; }
-        body { font-family: 'IRANSansWeb', sans-serif; background-color: #fcfcfc; }
-    </style>
+    <link rel="stylesheet" href="/static/css/theme.css">
 </head>
-<body class="text-zinc-900 text-xs antialiased">
+<body>
+<div class="atmosphere"></div>
+<div class="shell">
 
-    <nav class="bg-white border-b border-zinc-200 sticky top-0 z-50 shadow-sm">
-        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-6">
-                <span class="text-sm font-black tracking-tight text-red-600 flex items-center gap-2">
-                    <span class="w-2 h-5 bg-red-600 rounded-full"></span> مدیریت ارشد سازمان
-                </span>
-                
-                <div class="bg-zinc-100 p-1 rounded-xl flex gap-1 border border-zinc-200 font-bold">
-                    <a href="/?tab=attendance" class="px-4 py-1.5 rounded-lg transition {{if eq .CurrentTab "attendance"}} bg-white text-zinc-900 shadow-sm {{else}} text-zinc-400 hover:text-zinc-900 {{end}}">
-                        ⏰ تب حضور و غیاب
-                    </a>
-                    <a href="/?tab=worklog" class="px-4 py-1.5 rounded-lg transition {{if eq .CurrentTab "worklog"}} bg-white text-zinc-900 shadow-sm {{else}} text-zinc-400 hover:text-zinc-900 {{end}}">
-                        📝 تب گزارش کارکرد مدیر
-                    </a>
-                    <a href="/?tab=management" class="px-4 py-1.5 rounded-lg transition {{if eq .CurrentTab "management"}} bg-white text-zinc-900 shadow-sm {{else}} text-zinc-400 hover:text-zinc-900 {{end}}">
-                        👥 تب مدیریت و استخدام نیرو
-                    </a>
-                    <a href="/?tab=project_report" class="px-4 py-1.5 rounded-lg transition {{if eq .CurrentTab "project_report"}} bg-white text-zinc-900 shadow-sm {{else}} text-zinc-400 hover:text-zinc-900 {{end}}">
-                        📊 تب خروجی و پایش ماهانه پروژه‌ها
-                    </a>
+    <header class="app-header">
+        <div class="container app-header__row">
+            <div class="brand">
+                <div class="brand__mark" style="background:linear-gradient(155deg, var(--amber), #c98c1d); box-shadow:0 8px 20px -8px rgba(240,181,69,.6);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.6-3 8.4-7 9-4-.6-7-4.4-7-9V6Z"/></svg>
+                </div>
+                <div class="brand__text">
+                    <span class="brand__title">کنترل پنل مدیریت ارشد</span>
+                    <span class="brand__subtitle">سامانهٔ کارکرد شمسی</span>
                 </div>
             </div>
-            
-            <div class="flex items-center gap-4">
-                <span class="font-bold text-zinc-500">مدیر: <span class="text-zinc-900">{{.CurrentUser}}</span></span>
-                <div class="text-zinc-400">|</div>
-                <div class="font-bold text-zinc-600">📅 امروز: {{.CurrentDate}}</div>
-                <a href="/logout" class="font-bold text-red-600 border border-red-200 bg-red-50 px-3 py-1 rounded-lg transition hover:bg-red-600 hover:text-white">خروج</a>
+
+            <div class="header-meta">
+                <div class="clock-chip">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
+                    <span class="clock-chip__time tabular" data-clock-time>--:--:--</span>
+                    <span class="clock-chip__date tabular">{{.CurrentDate}}</span>
+                </div>
+                <div class="user-chip is-admin">
+                    <span class="user-chip__avatar">{{.CurrentUser}}</span>
+                    <span style="display:flex;flex-direction:column;line-height:1.3;">
+                        <span class="user-chip__name">{{.CurrentUser}}</span>
+                        <span class="user-chip__role">مدیر ارشد سازمان</span>
+                    </span>
+                </div>
+                <a href="/logout" class="btn-logout">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+                    خروج
+                </a>
             </div>
         </div>
-    </nav>
+        <div class="container">
+            <nav class="nav-tabs">
+                <a href="/?tab=attendance" class="nav-tab {{if eq .CurrentTab "attendance"}}is-active{{end}}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
+                    حضور و غیاب
+                </a>
+                <a href="/?tab=worklog" class="nav-tab {{if eq .CurrentTab "worklog"}}is-active{{end}}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1Z"/><rect x="5" y="6" width="14" height="15" rx="2"/><path d="M9 12h6M9 16h4"/></svg>
+                    گزارش کارکرد مدیر
+                </a>
+                <a href="/?tab=management" class="nav-tab {{if eq .CurrentTab "management"}}is-active{{end}}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17.5" cy="8.5" r="2.6"/><path d="M15 13.5a4.6 4.6 0 0 1 5.5 4.5"/></svg>
+                    مدیریت و استخدام
+                </a>
+                <a href="/?tab=project_report" class="nav-tab {{if eq .CurrentTab "project_report"}}is-active{{end}}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9"/><path d="M11 19V5"/><path d="M18 19v-7"/><path d="M3 19h18"/></svg>
+                    پایش ماهانهٔ پروژه‌ها
+                </a>
+            </nav>
+        </div>
+    </header>
 
-    <main class="max-w-7xl mx-auto px-6 py-8">
+    <main class="container page">
+
         {{if .Message}}
-        <div class="mb-6 p-4 bg-zinc-900 text-white rounded-xl font-medium flex items-center justify-between">
-            <span>🔹 {{.Message}}</span>
-            <a href="/?tab={{.CurrentTab}}" class="text-zinc-400 hover:text-white text-[11px]">✕ بستن پیام</a>
+        <div class="alert" data-alert>
+            <div class="alert__msg">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+                {{.Message}}
+            </div>
+            <a href="/?tab={{.CurrentTab}}" class="alert__close">✕ بستن پیام</a>
         </div>
         {{end}}
 
-        <!-- تب اول: حضور و غیاب -->
+        <!-- تب اول: حضور و غیاب کل سازمان -->
         {{if eq .CurrentTab "attendance"}}
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
-            <div class="xl:col-span-2 space-y-4">
-                <div class="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex items-center justify-between">
-                    <span class="font-bold text-zinc-700">📆 فیلتر ترددهای کل سازمان بر اساس ماه مشخص:</span>
-                    <form action="/" method="GET" class="flex gap-2">
-                        <input type="hidden" name="tab" value="attendance">
-                        <select name="filter_month" class="bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-1.5 font-bold">
-                            <option value="">همه ماه‌های سال</option>
-                            <option value="01" {{if eq .SelectedMonthFilter "01"}}selected{{end}}>فروردین</option>
-                            <option value="02" {{if eq .SelectedMonthFilter "02"}}selected{{end}}>اردیبهشت</option>
-                            <option value="03" {{if eq .SelectedMonthFilter "03"}}selected{{end}}>خرداد</option>
-                            <option value="04" {{if eq .SelectedMonthFilter "04"}}selected{{end}}>تیر</option>
-                            <option value="05" {{if eq .SelectedMonthFilter "05"}}selected{{end}}>مرداد</option>
-                            <option value="06" {{if eq .SelectedMonthFilter "06"}}selected{{end}}>شهریور</option>
-                            <option value="07" {{if eq .SelectedMonthFilter "07"}}selected{{end}}>مهر</option>
-                            <option value="08" {{if eq .SelectedMonthFilter "08"}}selected{{end}}>آبان</option>
-                            <option value="09" {{if eq .SelectedMonthFilter "09"}}selected{{end}}>آذر</option>
-                            <option value="10" {{if eq .SelectedMonthFilter "10"}}selected{{end}}>دی</option>
-                            <option value="11" {{if eq .SelectedMonthFilter "11"}}selected{{end}}>بهمن</option>
-                            <option value="12" {{if eq .SelectedMonthFilter "12"}}selected{{end}}>اسفند</option>
-                        </select>
-                        <button type="submit" class="bg-zinc-900 text-white font-bold px-4 py-1.5 rounded-lg">اعمال</button>
-                    </form>
-                </div>
+        <div class="layout-2 mobile-actions-first">
 
-                <div class="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
-                    <div class="p-5 border-b border-zinc-100 bg-zinc-50/50">
-                        <h3 class="font-bold text-zinc-900 text-sm">⏱️ تاریخچه زمان‌های ورود و خروج کل پرسنل سازمان</h3>
+            <div class="stack">
+                <div class="card">
+                    <div class="card__head">
+                        <div class="card__head-text">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
+                            <span class="card__title">ترددهای کل سازمان</span>
+                        </div>
+                        <form action="/" method="GET" class="filter-form">
+                            <input type="hidden" name="tab" value="attendance">
+                            <select name="filter_month">
+                                <option value="">همهٔ ماه‌های سال</option>
+                                <option value="01" {{if eq .SelectedMonthFilter "01"}}selected{{end}}>فروردین</option>
+                                <option value="02" {{if eq .SelectedMonthFilter "02"}}selected{{end}}>اردیبهشت</option>
+                                <option value="03" {{if eq .SelectedMonthFilter "03"}}selected{{end}}>خرداد</option>
+                                <option value="04" {{if eq .SelectedMonthFilter "04"}}selected{{end}}>تیر</option>
+                                <option value="05" {{if eq .SelectedMonthFilter "05"}}selected{{end}}>مرداد</option>
+                                <option value="06" {{if eq .SelectedMonthFilter "06"}}selected{{end}}>شهریور</option>
+                                <option value="07" {{if eq .SelectedMonthFilter "07"}}selected{{end}}>مهر</option>
+                                <option value="08" {{if eq .SelectedMonthFilter "08"}}selected{{end}}>آبان</option>
+                                <option value="09" {{if eq .SelectedMonthFilter "09"}}selected{{end}}>آذر</option>
+                                <option value="10" {{if eq .SelectedMonthFilter "10"}}selected{{end}}>دی</option>
+                                <option value="11" {{if eq .SelectedMonthFilter "11"}}selected{{end}}>بهمن</option>
+                                <option value="12" {{if eq .SelectedMonthFilter "12"}}selected{{end}}>اسفند</option>
+                            </select>
+                            <button type="submit" class="btn btn-soft" style="width:auto;">اعمال</button>
+                        </form>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-right">
+                    <div class="table-wrap">
+                        <table class="dt">
                             <thead>
-                                <tr class="bg-zinc-50 border-b border-zinc-200 text-zinc-400 font-bold">
-                                    <th class="p-3 font-semibold">نیرو</th>
-                                    <th class="p-3 font-semibold">تاریخ روز</th>
-                                    <th class="p-3 font-semibold">زمان ورود</th>
-                                    <th class="p-3 font-semibold">زمان خروج</th>
-                                    <th class="p-3 font-semibold">⏱️ مدت زمان حضور</th>
-                                    <th class="p-3 font-semibold text-center">عملیات</th>
-                                </tr>
+                                <tr><th>نیرو</th><th>تاریخ</th><th>ورود</th><th>خروج</th><th>مدت حضور</th><th style="text-align:center;">عملیات</th></tr>
                             </thead>
-                            <tbody class="divide-y divide-zinc-100 text-zinc-600 font-medium">
+                            <tbody>
                                 {{range .AttendanceLogs}}
-                                <tr class="hover:bg-zinc-50/50 transition">
-                                    <td class="p-3 font-bold text-zinc-900">{{.EmployeeCode}}</td>
-                                    <td class="p-3 whitespace-nowrap text-zinc-500">📅 {{.ShamsiDate}}</td>
-                                    <td class="p-3 text-emerald-600 font-bold">🟢 {{.CheckIn}}</td>
-                                    <td class="p-3 text-zinc-800 font-bold">
-                                        {{if .CheckOut}} 🔴 {{.CheckOut}} {{else}} <span class="text-amber-500">⏳ در حال کار</span> {{end}}
+                                <tr>
+                                    <td data-label="نیرو" class="cell-strong">{{.EmployeeCode}}</td>
+                                    <td data-label="تاریخ" class="tabular text-faint">{{.ShamsiDate}}</td>
+                                    <td data-label="ورود"><span class="tag tag-in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg><span class="tabular">{{.CheckIn}}</span></span></td>
+                                    <td data-label="خروج">
+                                        {{if .CheckOut}}
+                                        <span class="tag tag-out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg><span class="tabular">{{.CheckOut}}</span></span>
+                                        {{else}}
+                                        <span class="stamp-live"><span class="stamp-live__dot"></span>درحال کار</span>
+                                        {{end}}
                                     </td>
-                                    <td class="p-3 text-indigo-600 font-black">{{.Duration}}</td>
-                                    <td class="p-3 text-center">
-                                        <a href="/delete-attendance?id={{.ID}}&tab=attendance" onclick="return confirm('آیا از حذف مطمئن هستید؟')" class="text-red-600 font-bold hover:underline">🗑️ حذف</a>
+                                    <td data-label="مدت حضور">
+                                        {{if .CheckOut}}<span class="cell-strong tabular">{{.Duration}}</span>{{else}}<span class="text-faint">{{.Duration}}</span>{{end}}
+                                    </td>
+                                    <td data-label="عملیات" class="cell-actions">
+                                        <a href="/delete-attendance?id={{.ID}}&tab=attendance" onclick="return confirm('آیا از حذف این تردد مطمئن هستید؟')" class="btn-link danger">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>
+                                            حذف
+                                        </a>
                                     </td>
                                 </tr>
+                                {{else}}
+                                <tr class="empty-row"><td colspan="6">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
+                                    هیچ تردد ثبت‌شده‌ای برای این بازه یافت نشد.
+                                </td></tr>
                                 {{end}}
                             </tbody>
                         </table>
@@ -119,172 +147,199 @@
                 </div>
             </div>
 
-            <div class="space-y-6 xl:col-span-1">
-                <div class="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm space-y-4">
-                    <h3 class="font-bold text-zinc-900 border-b border-zinc-100 pb-2 text-sm">⏰ ثبت تردد سریع امروز مدیر</h3>
-                    <div class="grid grid-cols-2 gap-3">
+            <div class="stack">
+                <div class="card card__pad">
+                    <div class="card__head-text" style="margin-bottom:16px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+                        <span class="card__title">ثبت تردد سریع امروز مدیر</span>
+                    </div>
+                    <div class="btn-row">
                         <form action="/checkin" method="POST">
                             <input type="hidden" name="tab" value="attendance">
-                            <button type="submit" class="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-3 rounded-lg transition tracking-wide text-xs">🛫 ورود زنده</button>
+                            <button type="submit" class="btn btn-primary">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>
+                                ورود زنده
+                            </button>
                         </form>
                         <form action="/checkout" method="POST">
                             <input type="hidden" name="tab" value="attendance">
-                            <button type="submit" class="w-full bg-zinc-100 hover:bg-zinc-200 text-zinc-900 font-bold py-3 rounded-lg transition border border-zinc-300">🛬 خروج زنده</button>
+                            <button type="submit" class="btn btn-soft">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg>
+                                خروج زنده
+                            </button>
                         </form>
                     </div>
                 </div>
 
-                <div class="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm space-y-4">
-                    <h3 class="font-bold text-red-600 border-b border-zinc-100 pb-2 text-sm">📬 ثبت تردد اصلاحی پرسنل سازمان</h3>
-                    <form action="/manual-attendance" method="POST" class="space-y-4">
+                <div class="card card__pad">
+                    <div class="card__head-text" style="margin-bottom:16px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2.4"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>
+                        <span class="card__title">ثبت تردد اصلاحی پرسنل</span>
+                    </div>
+                    <form action="/manual-attendance" method="POST" class="form">
                         <input type="hidden" name="tab" value="attendance">
-                        <div>
-                            <label class="block font-bold text-zinc-500 mb-1">کد پرسنلی کارمند هدف</label>
-                            <input type="text" name="target_employee" placeholder="مثلاً EMP-1001" required class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-center font-bold focus:outline-none">
+                        <div class="field">
+                            <label>کد پرسنلی کارمند هدف</label>
+                            <input type="text" name="target_employee" placeholder="مثلاً EMP-1001" required>
                         </div>
-                        <div>
-                            <label class="block font-bold text-zinc-400 mb-1">تاریخ روز جا افتاده (شمسی)</label>
-                            <input type="text" name="shamsi_date" value="{{.CurrentDate}}" data-jdp required class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-center font-bold text-zinc-800 cursor-pointer">
+                        <div class="field">
+                            <label>تاریخ روز جا افتاده (شمسی)</label>
+                            <input type="text" name="shamsi_date" value="{{.CurrentDate}}" data-jdp required class="tabular">
                         </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block font-bold text-zinc-400 mb-1">ساعت ورود</label>
-                                <input type="text" name="check_in_time" placeholder="08:00" required class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-center font-bold">
+                        <div class="field-row">
+                            <div class="field">
+                                <label>ساعت ورود</label>
+                                <input type="text" name="check_in_time" placeholder="08:00" required class="tabular">
                             </div>
-                            <div>
-                                <label class="block font-bold text-zinc-400 mb-1">ساعت خروج</label>
-                                <input type="text" name="check_out_time" placeholder="16:30" required class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-center font-bold">
+                            <div class="field">
+                                <label>ساعت خروج</label>
+                                <input type="text" name="check_out_time" placeholder="16:30" required class="tabular">
                             </div>
                         </div>
-                        <button type="submit" class="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-2 rounded-lg transition">🚀 ثبت تردد اصلاحی</button>
+                        <button type="submit" class="btn btn-amber">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                            ثبت تردد اصلاحی
+                        </button>
                     </form>
                 </div>
             </div>
         </div>
         {{end}}
 
-        <!-- تب دوم: گزارش عملکرد روزانه خود شخص مدیر -->
+        <!-- تب دوم: گزارش کارکرد شخصی مدیر -->
         {{if eq .CurrentTab "worklog"}}
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
-            <div class="space-y-6 xl:col-span-1">
+        <div class="layout-2 reverse">
+
+            <div class="stack">
                 {{if .EditLog}}
-                <div class="bg-white p-6 rounded-xl border-2 border-zinc-900 shadow-md space-y-4">
-                    <div class="flex justify-between items-center border-b border-zinc-100 pb-2">
-                        <h3 class="font-bold text-zinc-900 text-sm">✏️ ویرایش گزارش کار مدیر</h3>
-                        <a href="/?tab=worklog" class="text-zinc-400 hover:text-zinc-900 font-bold">✕ لغو</a>
+                <div class="card card__pad" style="border-color:var(--indigo);">
+                    <div class="card__head" style="margin:-22px -22px 18px;padding:16px 20px;">
+                        <div class="card__head-text">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                            <span class="card__title">ویرایش گزارش کار مدیر</span>
+                        </div>
+                        <a href="/?tab=worklog" class="btn-link" style="color:var(--text-faint);">✕ لغو</a>
                     </div>
-                    <form action="/edit-worklog" method="POST" class="space-y-4">
+                    <form action="/edit-worklog" method="POST" class="form">
                         <input type="hidden" name="tab" value="worklog">
                         <input type="hidden" name="log_id" value="{{.EditLog.ID}}">
-                        <div>
-                            <label class="block font-bold text-zinc-400 mb-1">پروژه هدف</label>
-                            <select name="project_id" class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2">
+                        <div class="field">
+                            <label>پروژهٔ هدف</label>
+                            <select name="project_id">
                                 <option value="1" {{if eq .EditLog.ProjectID 1}}selected{{end}}>توسعه پلتفرم هوش مصنوعی</option>
                                 <option value="2" {{if eq .EditLog.ProjectID 2}}selected{{end}}>توسعه هسته Go</option>
                                 <option value="3" {{if eq .EditLog.ProjectID 3}}selected{{end}}>طراحی دیتابیس داکر</option>
                             </select>
                         </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block font-bold text-zinc-400 mb-1">تاریخ کارکرد</label>
-                                <input type="text" name="shamsi_date" value="{{.EditLog.ShamsiDate}}" data-jdp required class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-center font-bold cursor-pointer">
+                        <div class="field-row">
+                            <div class="field">
+                                <label>تاریخ کارکرد</label>
+                                <input type="text" name="shamsi_date" value="{{.EditLog.ShamsiDate}}" data-jdp required class="tabular">
                             </div>
-                            <div>
-                                <label class="block font-bold text-zinc-400 mb-1">مدت زمان (ساعت)</label>
-                                <input type="number" step="0.25" name="hours" value="{{.EditLog.HoursSpent}}" required class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2">
+                            <div class="field">
+                                <label>مدت زمان (ساعت)</label>
+                                <input type="number" step="0.25" name="hours" value="{{.EditLog.HoursSpent}}" required class="tabular">
                             </div>
                         </div>
-                        <div>
-                            <label class="block font-bold text-zinc-400 mb-1">شرح اقدامات</label>
-                            <textarea name="description" rows="3" required class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 resize-none">{{.EditLog.Description}}</textarea>
+                        <div class="field">
+                            <label>شرح اقدامات</label>
+                            <textarea name="description" rows="3" required>{{.EditLog.Description}}</textarea>
                         </div>
-                        <button type="submit" class="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-2 rounded-lg transition">💾 اعمال تغییرات نهایی</button>
+                        <button type="submit" class="btn btn-primary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>
+                            اعمال تغییرات نهایی
+                        </button>
                     </form>
                 </div>
                 {{else}}
-                <div class="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm space-y-4">
-                    <h3 class="font-bold text-zinc-900 border-b border-zinc-100 pb-2 text-sm">📝 ثبت کارکرد روزانه مدیر</h3>
-                    <form action="/logwork" method="POST" class="space-y-4">
+                <div class="card card__pad">
+                    <div class="card__head-text" style="margin-bottom:16px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1Z"/><rect x="5" y="6" width="14" height="15" rx="2"/><path d="M9 12h6M9 16h4"/></svg>
+                        <span class="card__title">ثبت کارکرد روزانهٔ مدیر</span>
+                    </div>
+                    <form action="/logwork" method="POST" class="form">
                         <input type="hidden" name="tab" value="worklog">
-                        <div>
-                            <label class="block font-bold text-zinc-400 mb-1">انتخاب پروژه</label>
-                            <select name="project_id" class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2.5 font-bold">
+                        <div class="field">
+                            <label>انتخاب پروژه</label>
+                            <select name="project_id">
                                 <option value="1">توسعه پلتفرم هوش مصنوعی</option>
                                 <option value="2">توسعه هسته Go</option>
                                 <option value="3">طراحی دیتابیس داکر</option>
                             </select>
                         </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block font-bold text-zinc-400 mb-1">تاریخ کارکرد (شمسی)</label>
-                                <input type="text" name="shamsi_date" value="{{.CurrentDate}}" data-jdp required class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 font-bold text-center text-zinc-900 cursor-pointer">
+                        <div class="field-row">
+                            <div class="field">
+                                <label>تاریخ کارکرد (شمسی)</label>
+                                <input type="text" name="shamsi_date" value="{{.CurrentDate}}" data-jdp required class="tabular">
                             </div>
-                            <div>
-                                <label class="block font-bold text-zinc-400 mb-1">مدت کارکرد (ساعت)</label>
-                                <input type="number" step="0.25" name="hours" placeholder="مثلاً 4" required class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2">
+                            <div class="field">
+                                <label>مدت کارکرد (ساعت)</label>
+                                <input type="number" step="0.25" name="hours" placeholder="مثلاً 4" required class="tabular">
                             </div>
                         </div>
-                        <div>
-                            <label class="block font-bold text-zinc-400 mb-1">شرح جزئیات اقدامات مدیریتی</label>
-                            <textarea name="description" rows="3" placeholder="اقدامات انجام شده..." required class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 resize-none"></textarea>
+                        <div class="field">
+                            <label>شرح جزئیات اقدامات مدیریتی</label>
+                            <textarea name="description" rows="3" placeholder="اقدامات انجام‌شده..." required></textarea>
                         </div>
-                        <button type="submit" class="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-2.5 rounded-lg transition shadow-sm">💾 ذخیره کارکرد مدیر</button>
+                        <button type="submit" class="btn btn-primary">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                            ذخیرهٔ کارکرد مدیر
+                        </button>
                     </form>
                 </div>
                 {{end}}
             </div>
 
-            <div class="xl:col-span-2 space-y-4">
-                <div class="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm flex items-center justify-between">
-                    <span class="font-bold text-zinc-700">📆 فیلتر گزارش کارکرد شخصی مدیر بر اساس ماه:</span>
-                    <form action="/" method="GET" class="flex gap-2">
-                        <input type="hidden" name="tab" value="worklog">
-                        <select name="filter_month" class="bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-1.5 font-bold">
-                            <option value="">همه ماه‌های سال</option>
-                            <option value="01" {{if eq .SelectedMonthFilter "01"}}selected{{end}}>فروردین</option>
-                            <option value="02" {{if eq .SelectedMonthFilter "02"}}selected{{end}}>اردیبهشت</option>
-                            <option value="03" {{if eq .SelectedMonthFilter "03"}}selected{{end}}>خرداد</option>
-                            <option value="04" {{if eq .SelectedMonthFilter "04"}}selected{{end}}>تیر</option>
-                            <option value="05" {{if eq .SelectedMonthFilter "05"}}selected{{end}}>مرداد</option>
-                            <option value="06" {{if eq .SelectedMonthFilter "06"}}selected{{end}}>شهریور</option>
-                            <option value="07" {{if eq .SelectedMonthFilter "07"}}selected{{end}}>مهر</option>
-                            <option value="08" {{if eq .SelectedMonthFilter "08"}}selected{{end}}>آبان</option>
-                            <option value="09" {{if eq .SelectedMonthFilter "09"}}selected{{end}}>آذر</option>
-                            <option value="10" {{if eq .SelectedMonthFilter "10"}}selected{{end}}>دی</option>
-                            <option value="11" {{if eq .SelectedMonthFilter "11"}}selected{{end}}>بهمن</option>
-                            <option value="12" {{if eq .SelectedMonthFilter "12"}}selected{{end}}>اسفند</option>
-                        </select>
-                        <button type="submit" class="bg-zinc-900 text-white font-bold px-4 py-1.5 rounded-lg">اعمال</button>
-                    </form>
-                </div>
-
-                <div class="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
-                    <div class="p-5 border-b border-zinc-100 bg-zinc-50/50 flex justify-between items-center"><h3 class="font-bold text-zinc-900 text-sm">📋 لیست اقدامات و عملکرد شخصی خود مدیر</h3></div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-right">
+            <div class="stack">
+                <div class="card">
+                    <div class="card__head">
+                        <div class="card__head-text">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2.4"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>
+                            <span class="card__title">اقدامات و عملکرد شخصی مدیر</span>
+                        </div>
+                        <form action="/" method="GET" class="filter-form">
+                            <input type="hidden" name="tab" value="worklog">
+                            <select name="filter_month">
+                                <option value="">همهٔ ماه‌های سال</option>
+                                <option value="01" {{if eq .SelectedMonthFilter "01"}}selected{{end}}>فروردین</option>
+                                <option value="02" {{if eq .SelectedMonthFilter "02"}}selected{{end}}>اردیبهشت</option>
+                                <option value="03" {{if eq .SelectedMonthFilter "03"}}selected{{end}}>خرداد</option>
+                                <option value="04" {{if eq .SelectedMonthFilter "04"}}selected{{end}}>تیر</option>
+                                <option value="05" {{if eq .SelectedMonthFilter "05"}}selected{{end}}>مرداد</option>
+                                <option value="06" {{if eq .SelectedMonthFilter "06"}}selected{{end}}>شهریور</option>
+                                <option value="07" {{if eq .SelectedMonthFilter "07"}}selected{{end}}>مهر</option>
+                                <option value="08" {{if eq .SelectedMonthFilter "08"}}selected{{end}}>آبان</option>
+                                <option value="09" {{if eq .SelectedMonthFilter "09"}}selected{{end}}>آذر</option>
+                                <option value="10" {{if eq .SelectedMonthFilter "10"}}selected{{end}}>دی</option>
+                                <option value="11" {{if eq .SelectedMonthFilter "11"}}selected{{end}}>بهمن</option>
+                                <option value="12" {{if eq .SelectedMonthFilter "12"}}selected{{end}}>اسفند</option>
+                            </select>
+                            <button type="submit" class="btn btn-soft" style="width:auto;">اعمال</button>
+                        </form>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="dt">
                             <thead>
-                                <tr class="bg-zinc-50 border-b border-zinc-200 text-zinc-400 font-bold">
-                                    <th class="p-3 font-semibold">تاریخ شمسی</th>
-                                    <th class="p-3 font-semibold">عنوان پروژه مربوطه</th>
-                                    <th class="p-3 font-semibold">شرح فرآیند اقدامات</th>
-                                    <th class="p-3 font-semibold">مدت زمان</th>
-                                    <th class="p-3 font-semibold text-center">عملیات</th>
-                                </tr>
+                                <tr><th>تاریخ</th><th>پروژه</th><th>شرح فرآیند</th><th>مدت</th><th style="text-align:center;">عملیات</th></tr>
                             </thead>
-                            <tbody class="divide-y divide-zinc-100 font-medium text-zinc-600">
+                            <tbody>
                                 {{range .WorkLogs}}
                                 {{if eq .EmployeeCode "ADMIN"}}
-                                <tr class="hover:bg-zinc-50/50 transition">
-                                    <td class="p-3 whitespace-nowrap text-zinc-500">📅 {{.ShamsiDate}}</td>
-                                    <td class="p-3 font-bold text-zinc-800">{{.ProjectName}}</td>
-                                    <td class="p-3 max-w-xs text-zinc-500 leading-relaxed">{{.Description}}</td>
-                                    <td class="p-3 text-zinc-900 font-black whitespace-nowrap">{{.HoursSpent}} ساعت</td>
-                                    <td class="p-3 text-center whitespace-nowrap">
-                                        <div class="flex items-center justify-center gap-2">
-                                            <a href="/?edit_id={{.ID}}&tab=worklog" class="text-zinc-900 font-bold hover:underline">✏️ ویرایش</a>
-                                            <div class="text-zinc-200">|</div>
-                                            <a href="/delete-worklog?id={{.ID}}&tab=worklog" onclick="return confirm('آیا مطمئن هستید؟')" class="text-red-600 font-bold hover:underline">🗑️ حذف</a>
-                                        </div>
+                                <tr>
+                                    <td data-label="تاریخ" class="cell-strong tabular">{{.ShamsiDate}}</td>
+                                    <td data-label="پروژه" class="cell-strong">{{.ProjectName}}</td>
+                                    <td data-label="شرح فرآیند" class="cell-desc">{{.Description}}</td>
+                                    <td data-label="مدت" class="cell-strong tabular">{{.HoursSpent}} ساعت</td>
+                                    <td data-label="عملیات" class="cell-actions">
+                                        <a href="/?edit_id={{.ID}}&tab=worklog" class="btn-link edit">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                            ویرایش
+                                        </a>
+                                        <span class="cell-sep"></span>
+                                        <a href="/delete-worklog?id={{.ID}}&tab=worklog" onclick="return confirm('آیا مطمئن هستید؟')" class="btn-link danger">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>
+                                            حذف
+                                        </a>
                                     </td>
                                 </tr>
                                 {{end}}
@@ -299,68 +354,77 @@
 
         <!-- تب سوم: مدیریت پرسنل -->
         {{if eq .CurrentTab "management"}}
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
-            <div class="space-y-6 xl:col-span-1">
-                <div class="bg-zinc-900 p-6 rounded-xl text-white space-y-4 shadow-xl border border-zinc-800">
-                    <h3 class="font-bold border-b border-zinc-800 pb-2 text-indigo-400 flex items-center gap-1.5 text-sm">👥 استخدام و تعریف نیروی جدید سازمان</h3>
-                    <form action="/admin/add-employee" method="POST" class="space-y-3" autocomplete="off">
+        <div class="layout-2 reverse">
+            <div class="stack">
+                <div class="card card__pad" style="background:linear-gradient(180deg, var(--surface), var(--surface-2)); border-color:var(--border-strong);">
+                    <div class="card__head-text" style="margin-bottom:16px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17.5" cy="8.5" r="2.6"/><path d="M15 13.5a4.6 4.6 0 0 1 5.5 4.5"/></svg>
+                        <span class="card__title">استخدام و تعریف نیروی جدید سازمان</span>
+                    </div>
+                    <form action="/admin/add-employee" method="POST" class="form" autocomplete="off">
                         <input type="hidden" name="tab" value="management">
-                        <div>
-                            <label class="block text-zinc-400 mb-1 font-bold">کد پرسنلی (نام کاربری ورود پرسنل)</label>
-                            <input type="text" name="emp_code" placeholder="مثلاً EMP-1002" required autocomplete="off" class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-center font-bold text-white focus:outline-none">
+                        <div class="field">
+                            <label>کد پرسنلی (نام کاربری ورود)</label>
+                            <input type="text" name="emp_code" placeholder="مثلاً EMP-1002" required autocomplete="off">
                         </div>
-                        <div>
-                            <label class="block text-zinc-400 mb-1 font-bold">کلمه عبور امن پرسنل</label>
-                            <input type="password" name="password" placeholder="رمز ورود اختصاصی کارمند" required autocomplete="new-password" class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-center font-bold text-white focus:outline-none">
+                        <div class="field">
+                            <label>کلمهٔ عبور امن پرسنل</label>
+                            <input type="password" name="password" placeholder="رمز ورود اختصاصی کارمند" required autocomplete="new-password">
                         </div>
-                        <div>
-                            <label class="block text-zinc-400 mb-1 font-bold">نام و نام خانوادگی کامل</label>
-                            <input type="text" name="full_name" placeholder="مثلاً مهندس محمدرضا کریمی" required class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none">
+                        <div class="field">
+                            <label>نام و نام خانوادگی کامل</label>
+                            <input type="text" name="full_name" placeholder="مثلاً مهندس محمدرضا کریمی" required>
                         </div>
-                        <div>
-                            <label class="block text-zinc-400 mb-1 font-bold">سطح دسترسی نقش</label>
-                            <select name="role" class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white font-bold">
+                        <div class="field">
+                            <label>سطح دسترسی نقش</label>
+                            <select name="role">
                                 <option value="EMPLOYEE">کارمند عادی واحد پرسنلی</option>
                                 <option value="ADMIN">مدیر ارشد کل سیستم</option>
                             </select>
                         </div>
-                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg transition shadow-sm text-xs">💾 استخدام و ثبت نهایی در دیتابیس</button>
+                        <button type="submit" class="btn btn-amber">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                            استخدام و ثبت نهایی
+                        </button>
                     </form>
                 </div>
             </div>
-            <div class="xl:col-span-2 bg-white rounded-xl border border-zinc-200 shadow-sm p-6 text-zinc-400 text-center font-bold">
-                جهت رصد و فیلترینگ ماتریسی ریز کارکرد پرسنل سازمان یا استخراج خروجی‌های تخصصی اکسل، لطفا از تب چهارم («تب خروجی و پایش ماهانه پروژه‌ها») استفاده فرمایید.
+            <div class="stack">
+                <div class="card notice-block" style="min-height:100%;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19V9"/><path d="M11 19V5"/><path d="M18 19v-7"/><path d="M3 19h18"/></svg>
+                    <p>برای رصد و فیلترینگ ماتریسی ریز کارکرد پرسنل سازمان یا استخراج خروجی اکسل تخصصی، از تب «پایش ماهانهٔ پروژه‌ها» استفاده کنید.</p>
+                </div>
             </div>
         </div>
         {{end}}
 
         <!-- تب چهارم: گزارش ماتریسی ماه‌ها و پروژه‌ها -->
         {{if eq .CurrentTab "project_report"}}
-        <div class="space-y-6">
-            <div class="bg-white p-5 rounded-xl border border-zinc-200 shadow-sm">
-                <form action="/" method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <div class="stack">
+            <div class="card card__pad">
+                <form action="/" method="GET" class="filter-grid">
                     <input type="hidden" name="tab" value="project_report">
-                    <div>
-                        <label class="block font-bold text-zinc-400 mb-1.5">فیلتر پرسنل سازمان</label>
-                        <select name="filter_employee" class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 font-bold text-zinc-700 focus:outline-none">
-                            <option value="">همه کارکنان سازمان</option>
+                    <div class="field">
+                        <label>فیلتر پرسنل سازمان</label>
+                        <select name="filter_employee">
+                            <option value="">همهٔ کارکنان سازمان</option>
                             <option value="EMP-1001" {{if eq .SelectedFilter "EMP-1001"}}selected{{end}}>کارمند (EMP-1001)</option>
                             <option value="ADMIN" {{if eq .SelectedFilter "ADMIN"}}selected{{end}}>مدیریت کل (ADMIN)</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block font-bold text-zinc-400 mb-1.5">فیلتر پروژه هدف</label>
-                        <select name="filter_project" class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 font-bold text-zinc-700 focus:outline-none">
-                            <option value="">همه پروژه‌های فعال</option>
+                    <div class="field">
+                        <label>فیلتر پروژهٔ هدف</label>
+                        <select name="filter_project">
+                            <option value="">همهٔ پروژه‌های فعال</option>
                             <option value="1" {{if eq .SelectedProjectFilter "1"}}selected{{end}}>توسعه پلتفرم هوش مصنوعی</option>
                             <option value="2" {{if eq .SelectedProjectFilter "2"}}selected{{end}}>توسعه هسته Go</option>
                             <option value="3" {{if eq .SelectedProjectFilter "3"}}selected{{end}}>طراحی دیتابیس داکر</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block font-bold text-zinc-400 mb-1.5">انتخاب ماه مشخص (شمسی)</label>
-                        <select name="filter_month" class="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 font-bold text-zinc-700 focus:outline-none">
-                            <option value="">همه ماه‌های سال</option>
+                    <div class="field">
+                        <label>انتخاب ماه مشخص (شمسی)</label>
+                        <select name="filter_month">
+                            <option value="">همهٔ ماه‌های سال</option>
                             <option value="01" {{if eq .SelectedMonthFilter "01"}}selected{{end}}>فروردین</option>
                             <option value="02" {{if eq .SelectedMonthFilter "02"}}selected{{end}}>اردیبهشت</option>
                             <option value="03" {{if eq .SelectedMonthFilter "03"}}selected{{end}}>خرداد</option>
@@ -375,53 +439,63 @@
                             <option value="12" {{if eq .SelectedMonthFilter "12"}}selected{{end}}>اسفند</option>
                         </select>
                     </div>
-                    <button type="submit" class="bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-2 rounded-lg transition h-[34px] tracking-wide">🔍 اعمال فیلتر ماتریسی</button>
+                    <button type="submit" class="btn btn-primary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                        اعمال فیلتر ماتریسی
+                    </button>
                 </form>
             </div>
 
-            <div class="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
-                <div class="p-5 border-b border-zinc-100 bg-zinc-50/50 flex justify-between items-center flex-wrap gap-3">
+            <div class="card">
+                <div class="card__head">
                     <div>
-                        <h3 class="font-bold text-zinc-900 text-sm">📋 پایش ماهانه پروژه‌ها بر اساس عملکرد تفکیکی پرسنل</h3>
-                        <p class="text-zinc-400 mt-0.5">مشاهده دقیق اینکه هر نیرو روی چه پروژه‌ای، در چه تاریخ دقیقی، چه کاری انجام داده است.</p>
+                        <div class="card__head-text">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9"/><path d="M11 19V5"/><path d="M18 19v-7"/><path d="M3 19h18"/></svg>
+                            <span class="card__title">پایش ماهانهٔ پروژه‌ها بر اساس عملکرد پرسنل</span>
+                        </div>
+                        <div class="card__hint">مشاهدهٔ دقیق اینکه هر نیرو روی چه پروژه‌ای، در چه تاریخی، چه کاری انجام داده است.</div>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <a href="/export?employee_code={{.SelectedFilter}}&project_id={{.SelectedProjectFilter}}&filter_month={{.SelectedMonthFilter}}" class="bg-zinc-900 hover:bg-zinc-800 text-white px-5 py-2 rounded-lg font-bold transition flex items-center gap-1">
-                            🟢 استخراج گزارش اکسل (Excel)
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                        <a href="/export?employee_code={{.SelectedFilter}}&project_id={{.SelectedProjectFilter}}&filter_month={{.SelectedMonthFilter}}" class="btn btn-primary" style="width:auto;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+                            استخراج گزارش اکسل
                         </a>
-                        <span class="bg-zinc-100 font-bold px-3 py-2 rounded-lg border border-zinc-200 text-zinc-800">مجموع زمان: {{.TotalHours}} ساعت</span>
+                        <span class="stat-pill">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
+                            مجموع زمان: <b class="tabular">{{.TotalHours}}</b> ساعت
+                        </span>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-right">
+                <div class="table-wrap">
+                    <table class="dt">
                         <thead>
-                            <tr class="bg-zinc-50 border-b border-zinc-200 text-zinc-400 font-bold">
-                                <th class="p-3 font-semibold">کد نیرو</th>
-                                <th class="p-3 font-semibold">تاریخ دقیق فعالیت</th>
-                                <th class="p-3 font-semibold">عنوان پروژه مربوطه</th>
-                                <th class="p-3 font-semibold">شرح فرآیند اقدامات مکتوب روزانه</th>
-                                <th class="p-3 font-semibold">مدت کارکرد</th>
-                                <th class="p-3 font-semibold text-center">اقدامات</th>
-                            </tr>
+                            <tr><th>کد نیرو</th><th>تاریخ فعالیت</th><th>پروژه</th><th>شرح اقدامات روزانه</th><th>مدت کارکرد</th><th style="text-align:center;">اقدامات</th></tr>
                         </thead>
-                        <tbody class="divide-y divide-zinc-100 font-medium text-zinc-600">
+                        <tbody>
                             {{range .WorkLogs}}
-                            <tr class="hover:bg-zinc-50/50 transition">
-                                <td class="p-3 font-bold text-zinc-900">{{.EmployeeCode}}</td>
-                                <td class="p-3 whitespace-nowrap text-zinc-500">📅 {{.ShamsiDate}}</td>
-                                <td class="p-3 font-bold text-zinc-800">{{.ProjectName}}</td>
-                                <td class="p-3 max-w-xs text-zinc-500 leading-relaxed">{{.Description}}</td>
-                                <td class="p-3 text-zinc-900 font-black whitespace-nowrap">{{.HoursSpent}} ساعت</td>
-                                <td class="p-3 text-center whitespace-nowrap">
-                                    <div class="flex items-center justify-center gap-2">
-                                        <a href="/?edit_id={{.ID}}&tab=project_report" class="text-zinc-900 font-bold hover:underline">✏️ ویرایش</a>
-                                        <div class="text-zinc-200">|</div>
-                                        <a href="/delete-worklog?id={{.ID}}&tab=project_report" onclick="return confirm('آیا مطمئن هستید؟')" class="text-red-600 font-bold hover:underline">🗑️ حذف</a>
-                                    </div>
+                            <tr>
+                                <td data-label="کد نیرو" class="cell-strong">{{.EmployeeCode}}</td>
+                                <td data-label="تاریخ فعالیت" class="tabular text-faint">{{.ShamsiDate}}</td>
+                                <td data-label="پروژه" class="cell-strong">{{.ProjectName}}</td>
+                                <td data-label="شرح اقدامات روزانه" class="cell-desc">{{.Description}}</td>
+                                <td data-label="مدت کارکرد" class="cell-strong tabular">{{.HoursSpent}} ساعت</td>
+                                <td data-label="اقدامات" class="cell-actions">
+                                    <a href="/?edit_id={{.ID}}&tab=project_report" class="btn-link edit">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                        ویرایش
+                                    </a>
+                                    <span class="cell-sep"></span>
+                                    <a href="/delete-worklog?id={{.ID}}&tab=project_report" onclick="return confirm('آیا مطمئن هستید؟')" class="btn-link danger">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>
+                                        حذف
+                                    </a>
                                 </td>
                             </tr>
                             {{else}}
-                            <tr><td colspan="6" class="p-8 text-center text-zinc-400">هیچ گزارش کارکردی منطبق بر فیلتر جاری یافت نشد.</td></tr>
+                            <tr class="empty-row"><td colspan="6">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19V9"/><path d="M11 19V5"/><path d="M18 19v-7"/><path d="M3 19h18"/></svg>
+                                هیچ گزارش کارکردی منطبق بر فیلتر جاری یافت نشد.
+                            </td></tr>
                             {{end}}
                         </tbody>
                     </table>
@@ -429,12 +503,11 @@
             </div>
         </div>
         {{end}}
-    </main>
 
-    <script>
-        window.addEventListener("load", function() {
-            jalaliDatepicker.startWatch({ hideAfterSelect: true });
-        });
-    </script>
+    </main>
+</div>
+
+<script src="https://unpkg.com/@majidhajian/jalali-datepicker/dist/jalali-datepicker.min.js"></script>
+<script src="/static/js/app.js"></script>
 </body>
 </html>
