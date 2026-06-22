@@ -4,17 +4,23 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // DB متغیر عمومی دسترسی به دیتابیس داکر
 var DB *pgxpool.Pool
 
-// ConnectToDatabase برقراری اتصال امن با دیتابیس
+// ConnectToDatabase برقراری اتصال امن با دیتابیس (پشتیبانی از هماهنگی محیط داکر و لوکال)
 func ConnectToDatabase() {
-	dsn := "postgres://attendance_admin:shamsi_secure_pass_2026@localhost:5433/shamsi_attendance_platform?sslmode=disable"
+	// استفاده از متغیر محیطی در صورت وجود، در غیر این صورت بازگشت به مقدار پیش‌فرض پورت ۵۴۳۳
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		dsn = "postgres://attendance_admin:shamsi_secure_pass_2026@localhost:5433/shamsi_attendance_platform?sslmode=disable"
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -35,7 +41,7 @@ func ConnectToDatabase() {
 	CreateTables()
 }
 
-// CreateTables ساخت ساختار پیشرفته پرسنلی و به‌روزرسانی اجباری پسوردها
+// CreateTables ساخت ساختار پیشرفته پرسنلی و به‌روزرسانی اجباری پسوردها به صورت هش‌شده
 func CreateTables() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -50,7 +56,6 @@ func CreateTables() {
 			created_at TIMESTAMPTZ DEFAULT NOW()
 		);`,
 
-		// ترفند معماری: اگر جدول از قبل وجود داشت، این دستور ستون پسورد را به آن تزریق می‌کند
 		`ALTER TABLE employees ADD COLUMN IF NOT EXISTS password VARCHAR(255) NOT NULL DEFAULT '123456';`,
 
 		`CREATE TABLE IF NOT EXISTS projects (
@@ -84,25 +89,30 @@ func CreateTables() {
 		}
 	}
 
-	// ۲. ترفند جادویی DO UPDATE: اگر کاربر از قبل موجود بود، پسوردش را با اطلاعات جدید بازنویسی کن
-	seedQuery := `
+	// ایجاد هش امن برای کاربران پایه جهت جلوگیری از ذخیره متن خام در دیتابیس
+	adminHash, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+	empHash, _ := bcrypt.GenerateFromPassword([]byte("emp123"), bcrypt.DefaultCost)
+
+	// ۲. تزریق و آپدیت کاربران ادمین و کارمند نمونه با پسوردهای امن ساختاریافته
+	seedQuery := fmt.Sprintf(`
 		INSERT INTO employees (employee_code, full_name, password, role)
 		VALUES 
-			('ADMIN', 'مدیر کل سیستم ارشد', 'admin123', 'ADMIN'),
-			('EMP-1001', 'مهندس علیرضا حسینی', 'emp123', 'EMPLOYEE')
+			('ADMIN', 'مدیر کل سیستم ارشد', '%s', 'ADMIN'),
+			('EMP-1001', 'مهندس علیرضا حسینی', '%s', 'EMPLOYEE')
 		ON CONFLICT (employee_code) 
 		DO UPDATE SET 
 			password = EXCLUDED.password,
 			role = EXCLUDED.role,
 			full_name = EXCLUDED.full_name;
-	`
+	`, string(adminHash), string(empHash))
+
 	_, err := DB.Exec(ctx, seedQuery)
 	if err != nil {
 		log.Printf("⚠️ خطا در ست کردن اطلاعات پرسنل پایه: %v\n", err)
 	}
 
 	fmt.Println("--------------------------------------------------")
-	fmt.Println("🔑 اطلاعات ورود مجاز به سیستم (با موفقیت در داکر به‌روزرسانی شد):")
+	fmt.Println("🔑 اطلاعات ورود مجاز به سیستم (با هش پیشرفته Bcrypt به‌روزرسانی شد):")
 	fmt.Println("   ۱. پورتال مدیر: نام کاربری [ADMIN] | رمز عبور [admin123]")
 	fmt.Println("   ۲. پورتال کارمند: نام کاربری [EMP-1001] | رمز عبور [emp123]")
 	fmt.Println("--------------------------------------------------")

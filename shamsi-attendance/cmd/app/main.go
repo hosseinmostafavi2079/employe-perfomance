@@ -1,12 +1,15 @@
 package main
 
 import (
-	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"shamsi_attendance/internal/attendance"
@@ -14,7 +17,11 @@ import (
 	"shamsi_attendance/internal/project"
 
 	"github.com/xuri/excelize/v2"
+	"golang.org/x/crypto/bcrypt"
 )
+
+// کلید مخفی امضای کوکی‌ها جهت جلوگیری از جعل هویت کاربران
+var cookieSecret = []byte("shamsi_matrix_secure_salt_2026_key")
 
 type WorkLogView struct {
 	ID           int
@@ -36,19 +43,19 @@ type AttendanceView struct {
 }
 
 type PageData struct {
-	IsLoggedIn           bool
-	CurrentDate          string
-	TotalHours           float64
-	Message              string
-	CurrentUser          string
-	CurrentRole          string
-	SelectedFilter       string
+	IsLoggedIn            bool
+	CurrentDate           string
+	TotalHours            float64
+	Message               string
+	CurrentUser           string
+	CurrentRole           string
+	SelectedFilter        string
 	SelectedProjectFilter string
 	SelectedMonthFilter   string
-	CurrentTab           string
-	WorkLogs             []WorkLogView
-	AttendanceLogs       []AttendanceView
-	EditLog              *WorkLogView
+	CurrentTab            string
+	WorkLogs              []WorkLogView
+	AttendanceLogs        []AttendanceView
+	EditLog               *WorkLogView
 }
 
 var systemMessage string = ""
@@ -75,6 +82,7 @@ func main() {
 	http.HandleFunc("/edit-worklog", handleEditWorkLog)
 	http.HandleFunc("/delete-worklog", handleDeleteWorkLog)
 	http.HandleFunc("/delete-attendance", handleDeleteAttendance)
+	http.HandleFunc("/admin/add-employee", handleAddEmployee) // رفع باگ ۱: ثبت روت فرم استخدام پنل ادمین
 	http.HandleFunc("/export", handleExportExcel)
 
 	fmt.Println("🚀 وب‌سرور امن تفکیک‌شده با موفقیت روشن شد!")
@@ -83,22 +91,52 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
+// توابع امنیتی ساخت و بررسی کوکی امضا شده با مکانیزم HMAC-SHA256
+func signCookieValue(username string) string {
+	mac := hmac.New(sha256.New, cookieSecret)
+	mac.Write([]byte(username))
+	signature := hex.EncodeToString(mac.Sum(nil))
+	return username + ":" + signature
+}
+
+func verifyCookieValue(cookieVal string) (string, bool) {
+	parts := strings.Split(cookieVal, ":")
+	if len(parts) != 2 {
+		return "", false
+	}
+	username, clientSig := parts[0], parts[1]
+	
+	mac := hmac.New(sha256.New, cookieSecret)
+	mac.Write([]byte(username))
+	expectedSig := hex.EncodeToString(mac.Sum(nil))
+	
+	if hmac.Equal([]byte(clientSig), []byte(expectedSig)) {
+		return username, true
+	}
+	return "", false
+}
+
 func getAuthenticatedUser(r *http.Request) (string, string) {
 	cookie, err := r.Cookie("session_user")
 	if err != nil {
 		return "", ""
 	}
-	ctx := context.Background()
+	
+	// بررسی امضا و جلوگیری از جعل هویت کوکی
+	username, valid := verifyCookieValue(cookie.Value)
+	if !valid {
+		return "", ""
+	}
+
 	var role string
-	err = database.DB.QueryRow(ctx, "SELECT role FROM employees WHERE employee_code = $1;", cookie.Value).Scan(&role)
+	err = database.DB.QueryRow(r.Context(), "SELECT role FROM employees WHERE employee_code = $1;", username).Scan(&role)
 	if err != nil {
 		return "", ""
 	}
-	return cookie.Value, role
+	return username, role
 }
 
 func handleDashboard(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
 	username, role := getAuthenticatedUser(r)
 
 	if username == "" {
@@ -131,11 +169,11 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	if editIDParam != "" {
 		eID, _ := strconv.Atoi(editIDParam)
 		var ev WorkLogView
-		err := database.DB.QueryRow(ctx, "SELECT id, employee_code, project_id, hours_spent, description, shamsi_date FROM work_logs WHERE id=$1;", eID).
+		err := database.DB.QueryRow(r.Context(), "SELECT id, employee_code, project_id, hours_spent, description, shamsi_date FROM work_logs WHERE id=$1;", eID).
 			Scan(&ev.ID, &ev.EmployeeCode, &ev.ProjectID, &ev.HoursSpent, &ev.Description, &ev.ShamsiDate)
 		if err == nil {
 			editLog = &ev
-			currentTab = "worklog" // سوئیچ خودکار به تب کارکرد جهت ویرایش ردیف
+			currentTab = "worklog"
 		}
 	}
 
@@ -168,7 +206,7 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	logQuery += "ORDER BY w.shamsi_date DESC, w.id DESC;"
 
-	rows, err := database.DB.Query(ctx, logQuery, args...)
+	rows, err := database.DB.Query(r.Context(), logQuery, args...)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -199,7 +237,7 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 		sumQuery += fmt.Sprintf("AND split_part(shamsi_date, '/', 2) = $%d ", sumArgIdx)
 		sumArgs = append(sumArgs, filterMonth)
 	}
-	_ = database.DB.QueryRow(ctx, sumQuery, sumArgs...).Scan(&totalHours)
+	_ = database.DB.QueryRow(r.Context(), sumQuery, sumArgs...).Scan(&totalHours)
 
 	var attLogs []AttendanceView
 	var attQuery string
@@ -224,7 +262,7 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	attQuery += "ORDER BY id DESC;"
 
-	aRows, err := database.DB.Query(ctx, attQuery, attArgs...)
+	aRows, err := database.DB.Query(r.Context(), attQuery, attArgs...)
 	if err == nil {
 		defer aRows.Close()
 		for aRows.Next() {
@@ -249,19 +287,19 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := PageData{
-		IsLoggedIn:           true,
-		CurrentDate:          attendance.GetCurrentShamsiDate(),
-		TotalHours:           totalHours,
-		Message:              systemMessage,
-		CurrentUser:          username,
-		CurrentRole:          role,
-		SelectedFilter:       filterEmployee,
+		IsLoggedIn:            true,
+		CurrentDate:           attendance.GetCurrentShamsiDate(),
+		TotalHours:            totalHours,
+		Message:               systemMessage,
+		CurrentUser:           username,
+		CurrentRole:           role,
+		SelectedFilter:        filterEmployee,
 		SelectedProjectFilter: filterProject,
 		SelectedMonthFilter:   filterMonth,
-		CurrentTab:           currentTab,
-		WorkLogs:             workLogs,
-		AttendanceLogs:       attLogs,
-		EditLog:              editLog,
+		CurrentTab:            currentTab,
+		WorkLogs:              workLogs,
+		AttendanceLogs:        attLogs,
+		EditLog:               editLog,
 	}
 	systemMessage = ""
 
@@ -282,14 +320,17 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		username := r.FormValue("username")
 		password := r.FormValue("password")
-		ctx := context.Background()
-		var dbUser string
 		
-		err := database.DB.QueryRow(ctx, "SELECT employee_code FROM employees WHERE employee_code = $1 AND password = $2;", username, password).Scan(&dbUser)
-		if err == nil && dbUser != "" {
+		var dbUser, hashedPass string
+		// استخراج یوزر و هش کلمه عبور جهت مقایسه امن
+		err := database.DB.QueryRow(r.Context(), "SELECT employee_code, password FROM employees WHERE employee_code = $1;", username).Scan(&dbUser, &hashedPass)
+		
+		if err == nil && dbUser != "" && bcrypt.CompareHashAndPassword([]byte(hashedPass), []byte(password)) == nil {
+			// صدور کوکی مجهز به امضای دیجیتال غیرقابل جعل
+			secureValue := signCookieValue(username)
 			http.SetCookie(w, &http.Cookie{
 				Name:     "session_user",
-				Value:    username,
+				Value:    secureValue,
 				Expires:  time.Now().Add(24 * time.Hour),
 				HttpOnly: true,
 				Path:     "/",
@@ -321,7 +362,6 @@ func handleCheckIn(w http.ResponseWriter, r *http.Request) {
 		tab = "attendance"
 	}
 	if username != "" {
-		// دریافت خطا از لایه حضور و غیاب در صورت وجود ورود باز همزمان
 		err := attendance.CheckIn(username)
 		if err != nil {
 			systemMessage = "⚠️ خطا: " + err.Error()
@@ -361,8 +401,13 @@ func handleLogWork(w http.ResponseWriter, r *http.Request) {
 		desc := r.FormValue("description")
 		sDate := r.FormValue("shamsi_date")
 
-		_ = project.LogWorkWithDate(username, pID, hours, desc, sDate)
-		systemMessage = "گزارش کارکرد با موفقیت ثبت شد."
+		// رفع باگ ۲: پایش خطا و ست کردن سیستم مسج بجای نادیده گرفتن
+		err := project.LogWorkWithDate(username, pID, hours, desc, sDate)
+		if err != nil {
+			systemMessage = "⚠️ خطا در ثبت کارکرد روزانه: " + err.Error()
+		} else {
+			systemMessage = "گزارش کارکرد با موفقیت ثبت شد."
+		}
 	}
 	http.Redirect(w, r, "/?tab="+tab, http.StatusSeeOther)
 }
@@ -406,8 +451,13 @@ func handleEditWorkLog(w http.ResponseWriter, r *http.Request) {
 		desc := r.FormValue("description")
 		sDate := r.FormValue("shamsi_date")
 
-		_ = project.UpdateWorkLog(logID, pID, hours, desc, sDate)
-		systemMessage = "رکورد کارکرد روزانه شما با موفقیت به روزرسانی شد."
+		// رفع باگ ۲: پایش خطا به جای استفاده از دیسکارد
+		err := project.UpdateWorkLog(logID, pID, hours, desc, sDate)
+		if err != nil {
+			systemMessage = "⚠️ خطا در ویرایش رکورد: " + err.Error()
+		} else {
+			systemMessage = "رکورد کارکرد روزانه شما با موفقیت به روزرسانی شد."
+		}
 	}
 	http.Redirect(w, r, "/?tab="+tab, http.StatusSeeOther)
 }
@@ -420,8 +470,14 @@ func handleDeleteWorkLog(w http.ResponseWriter, r *http.Request) {
 	}
 	if username != "" {
 		logID, _ := strconv.Atoi(r.URL.Query().Get("id"))
-		_ = project.DeleteWorkLog(logID)
-		systemMessage = "رکورد کارکرد حذف شد."
+		
+		// رفع باگ ۲: مدیریت خطای لایه آمار حذف کارکرد
+		err := project.DeleteWorkLog(logID)
+		if err != nil {
+			systemMessage = "⚠️ خطا در حذف کارکرد: " + err.Error()
+		} else {
+			systemMessage = "رکورد کارکرد حذف شد."
+		}
 	}
 	http.Redirect(w, r, "/?tab="+tab, http.StatusSeeOther)
 }
@@ -434,8 +490,9 @@ func handleDeleteAttendance(w http.ResponseWriter, r *http.Request) {
 	}
 	if username != "" {
 		attID, _ := strconv.Atoi(r.URL.Query().Get("id"))
-		ctx := context.Background()
-		_, err := database.DB.Exec(ctx, "DELETE FROM attendance WHERE id = $1;", attID)
+		
+		// رفع باگ ۴: تغییر به کانتکست لایو زنده درخواست مرورگر
+		_, err := database.DB.Exec(r.Context(), "DELETE FROM attendance WHERE id = $1;", attID)
 		if err != nil {
 			systemMessage = "خطا در حذف تردد: " + err.Error()
 		} else {
@@ -457,9 +514,16 @@ func handleAddEmployee(w http.ResponseWriter, r *http.Request) {
 		fullName := r.FormValue("full_name")
 		uRole := r.FormValue("role")
 
-		ctx := context.Background()
+		// هش کردن رمز عبور کاربر جدید قبل از ذخیره‌سازی در پایگاه داده با استاندارد صنعتی Bcrypt
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			systemMessage = "خطا در پردازش و رمزنگاری کلمه عبور امن پرسنل."
+			http.Redirect(w, r, "/?tab="+tab, http.StatusSeeOther)
+			return
+		}
+
 		query := "INSERT INTO employees (employee_code, full_name, password, role) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING;"
-		_, err := database.DB.Exec(ctx, query, empCode, fullName, password, uRole)
+		_, err = database.DB.Exec(r.Context(), query, empCode, fullName, string(hashedPassword), uRole)
 		if err != nil {
 			systemMessage = "خطا در ثبت پرسنل جدید: " + err.Error()
 		} else {
@@ -470,7 +534,6 @@ func handleAddEmployee(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleExportExcel(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
 	username, role := getAuthenticatedUser(r)
 	if username == "" {
 		http.Error(w, "عدم احراز هویت", http.StatusUnauthorized)
@@ -508,7 +571,7 @@ func handleExportExcel(w http.ResponseWriter, r *http.Request) {
 	}
 	logQuery += "ORDER BY w.shamsi_date DESC;"
 
-	rows, err := database.DB.Query(ctx, logQuery, args...)
+	rows, err := database.DB.Query(r.Context(), logQuery, args...)
 	if err != nil {
 		http.Error(w, "خطا در واکشی داده‌های اکسل", http.StatusInternalServerError)
 		return
