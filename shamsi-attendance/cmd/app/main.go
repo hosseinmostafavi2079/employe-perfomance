@@ -20,7 +20,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// کلید مخفی امضای کوکی‌ها جهت جلوگیری از جعل هویت کاربران
 var cookieSecret = []byte("shamsi_matrix_secure_salt_2026_key")
 
 type WorkLogView struct {
@@ -42,20 +41,37 @@ type AttendanceView struct {
 	ShamsiDate   string
 }
 
+type ProjectView struct {
+	ID   int
+	Name string
+}
+
+type EmployeeView struct {
+	ID           int
+	EmployeeCode string
+	FullName     string
+	Role         string
+}
+
 type PageData struct {
-	IsLoggedIn            bool
-	CurrentDate           string
-	TotalHours            float64
-	Message               string
-	CurrentUser           string
-	CurrentRole           string
-	SelectedFilter        string
-	SelectedProjectFilter string
-	SelectedMonthFilter   string
-	CurrentTab            string
-	WorkLogs              []WorkLogView
+	IsLoggedIn              bool
+	CurrentDate             string
+	TotalHours              float64
+	Message                 string
+	CurrentUser             string
+	CurrentRole             string
+	SelectedFilter          string
+	SelectedProjectFilter   string
+	SelectedMonthFilter     string
+	CurrentTab              string
+	WorkLogs                []WorkLogView
 	AttendanceLogs        []AttendanceView
-	EditLog               *WorkLogView
+	EditLog                 *WorkLogView
+	EditAttendanceLog       *AttendanceView
+	TotalAttendanceMonthStr string
+	TotalAttendanceDayStr   string
+	Projects                []ProjectView
+	Employees               []EmployeeView
 }
 
 var systemMessage string = ""
@@ -79,10 +95,16 @@ func main() {
 	http.HandleFunc("/checkout", handleCheckOut)
 	http.HandleFunc("/logwork", handleLogWork)
 	http.HandleFunc("/manual-attendance", handleManualAttendance)
+	http.HandleFunc("/edit-attendance", handleEditAttendance)
 	http.HandleFunc("/edit-worklog", handleEditWorkLog)
 	http.HandleFunc("/delete-worklog", handleDeleteWorkLog)
 	http.HandleFunc("/delete-attendance", handleDeleteAttendance)
-	http.HandleFunc("/admin/add-employee", handleAddEmployee) // رفع باگ ۱: ثبت روت فرم استخدام پنل ادمین
+	
+	http.HandleFunc("/admin/add-employee", handleAddEmployee)
+	http.HandleFunc("/admin/delete-employee", handleDeleteEmployee)
+	http.HandleFunc("/admin/create-project", handleCreateProject)
+	http.HandleFunc("/admin/delete-project", handleDeleteProject)
+	
 	http.HandleFunc("/export", handleExportExcel)
 
 	fmt.Println("🚀 وب‌سرور امن تفکیک‌شده با موفقیت روشن شد!")
@@ -91,12 +113,10 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-// توابع امنیتی ساخت و بررسی کوکی امضا شده با مکانیزم HMAC-SHA256
 func signCookieValue(username string) string {
 	mac := hmac.New(sha256.New, cookieSecret)
 	mac.Write([]byte(username))
-	signature := hex.EncodeToString(mac.Sum(nil))
-	return username + ":" + signature
+	return username + ":" + hex.EncodeToString(mac.Sum(nil))
 }
 
 func verifyCookieValue(cookieVal string) (string, bool) {
@@ -105,12 +125,9 @@ func verifyCookieValue(cookieVal string) (string, bool) {
 		return "", false
 	}
 	username, clientSig := parts[0], parts[1]
-	
 	mac := hmac.New(sha256.New, cookieSecret)
 	mac.Write([]byte(username))
-	expectedSig := hex.EncodeToString(mac.Sum(nil))
-	
-	if hmac.Equal([]byte(clientSig), []byte(expectedSig)) {
+	if hmac.Equal([]byte(clientSig), []byte(hex.EncodeToString(mac.Sum(nil)))) {
 		return username, true
 	}
 	return "", false
@@ -121,13 +138,10 @@ func getAuthenticatedUser(r *http.Request) (string, string) {
 	if err != nil {
 		return "", ""
 	}
-	
-	// بررسی امضا و جلوگیری از جعل هویت کوکی
 	username, valid := verifyCookieValue(cookie.Value)
 	if !valid {
 		return "", ""
 	}
-
 	var role string
 	err = database.DB.QueryRow(r.Context(), "SELECT role FROM employees WHERE employee_code = $1;", username).Scan(&role)
 	if err != nil {
@@ -150,12 +164,24 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	currentShamsiDate := attendance.GetCurrentShamsiDate()
+	dateParts := strings.Split(currentShamsiDate, "/")
+	currentMonth := ""
+	if len(dateParts) == 3 {
+		currentMonth = dateParts[1]
+	}
+
 	editIDParam := r.URL.Query().Get("edit_id")
+	editAttIDParam := r.URL.Query().Get("edit_attendance_id")
 	filterEmployee := r.URL.Query().Get("filter_employee")
 	filterProject := r.URL.Query().Get("filter_project")
+	
 	filterMonth := r.URL.Query().Get("filter_month")
-	tabParam := r.URL.Query().Get("tab")
+	if _, hasMonth := r.URL.Query()["filter_month"]; !hasMonth {
+		filterMonth = currentMonth
+	}
 
+	tabParam := r.URL.Query().Get("tab")
 	currentTab := "attendance"
 	if tabParam == "worklog" {
 		currentTab = "worklog"
@@ -163,6 +189,28 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 		currentTab = "management"
 	} else if tabParam == "project_report" && role == "ADMIN" {
 		currentTab = "project_report"
+	}
+
+	var projects []ProjectView
+	pRows, _ := database.DB.Query(r.Context(), "SELECT id, name FROM projects ORDER BY id ASC;")
+	if pRows != nil {
+		for pRows.Next() {
+			var p ProjectView
+			_ = pRows.Scan(&p.ID, &p.Name)
+			projects = append(projects, p)
+		}
+		pRows.Close()
+	}
+
+	var employees []EmployeeView
+	eRows, _ := database.DB.Query(r.Context(), "SELECT id, employee_code, full_name, role FROM employees ORDER BY id ASC;")
+	if eRows != nil {
+		for eRows.Next() {
+			var emp EmployeeView
+			_ = eRows.Scan(&emp.ID, &emp.EmployeeCode, &emp.FullName, &emp.Role)
+			employees = append(employees, emp)
+		}
+		eRows.Close()
 	}
 
 	var editLog *WorkLogView = nil
@@ -174,6 +222,25 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			editLog = &ev
 			currentTab = "worklog"
+		}
+	}
+
+	var editAttendanceLog *AttendanceView = nil
+	if editAttIDParam != "" {
+		aID, _ := strconv.Atoi(editAttIDParam)
+		var av AttendanceView
+		var tIn, tOut *time.Time
+		err := database.DB.QueryRow(r.Context(), "SELECT id, employee_code, check_in, check_out, shamsi_date FROM attendance WHERE id=$1;", aID).
+			Scan(&av.ID, &av.EmployeeCode, &tIn, &tOut, &av.ShamsiDate)
+		if err == nil {
+			if tIn != nil {
+				av.CheckIn = tIn.In(time.Local).Format("15:04")
+			}
+			if tOut != nil {
+				av.CheckOut = tOut.In(time.Local).Format("15:04")
+			}
+			editAttendanceLog = &av
+			currentTab = "attendance"
 		}
 	}
 
@@ -244,14 +311,15 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	var attArgs []interface{}
 	attArgIdx := 1
 
-	if role == "ADMIN" && filterEmployee == "" {
+	if role == "ADMIN" {
 		attQuery = "SELECT id, employee_code, check_in, check_out, shamsi_date FROM attendance WHERE 1=1 "
-	} else if role == "ADMIN" && filterEmployee != "" {
-		attQuery = "SELECT id, employee_code, check_in, check_out, shamsi_date FROM attendance WHERE employee_code = $1 "
-		attArgs = append(attArgs, filterEmployee)
-		attArgIdx++
+		if filterEmployee != "" {
+			attQuery += fmt.Sprintf("AND employee_code = $%d ", attArgIdx)
+			attArgs = append(attArgs, filterEmployee)
+			attArgIdx++
+		}
 	} else {
-		attQuery = "SELECT id, employee_code, check_in, check_out, shamsi_date FROM attendance WHERE employee_code = $1 "
+		attQuery = fmt.Sprintf("SELECT id, employee_code, check_in, check_out, shamsi_date FROM attendance WHERE employee_code = $%d ", attArgIdx)
 		attArgs = append(attArgs, username)
 		attArgIdx++
 	}
@@ -259,8 +327,12 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	if filterMonth != "" {
 		attQuery += fmt.Sprintf("AND split_part(shamsi_date, '/', 2) = $%d ", attArgIdx)
 		attArgs = append(attArgs, filterMonth)
+		attArgIdx++
 	}
-	attQuery += "ORDER BY id DESC;"
+	attQuery += "ORDER BY shamsi_date DESC, id DESC;"
+
+	totalMinutesMonth := 0
+	totalMinutesDay := 0
 
 	aRows, err := database.DB.Query(r.Context(), attQuery, attArgs...)
 	if err == nil {
@@ -270,16 +342,26 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 			var tIn, tOut *time.Time
 			if err := aRows.Scan(&av.ID, &av.EmployeeCode, &tIn, &tOut, &av.ShamsiDate); err == nil {
 				if tIn != nil {
-					av.CheckIn = tIn.In(time.Local).Format("15:04:05")
+					av.CheckIn = tIn.In(time.Local).Format("15:04") // تغییر به فرمت ساعت:دقیقه بدون ثانیه
 				}
 				if tOut != nil {
-					av.CheckOut = tOut.In(time.Local).Format("15:04:05")
+					av.CheckOut = tOut.In(time.Local).Format("15:04") // تغییر به فرمت ساعت:دقیقه بدون ثانیه
 					diff := tOut.Sub(*tIn)
-					h := int(diff.Hours())
-					m := int(diff.Minutes()) % 60
-					av.Duration = fmt.Sprintf("%d ساعت و %d دقیقه", h, m)
+					totalMinutesMonth += int(diff.Minutes())
+					if av.ShamsiDate == currentShamsiDate {
+						totalMinutesDay += int(diff.Minutes())
+					}
+					// تغییر فیلد نمایش گرید به فرمت درخواستی شما (HH:MM)
+					av.Duration = fmt.Sprintf("%d:%02d", int(diff.Hours()), int(diff.Minutes())%60)
 				} else {
-					av.Duration = "حضور زنده فعال"
+					av.Duration = "حضور زنده"
+					if tIn != nil {
+						diff := time.Now().Sub(*tIn)
+						totalMinutesMonth += int(diff.Minutes())
+						if av.ShamsiDate == currentShamsiDate {
+							totalMinutesDay += int(diff.Minutes())
+						}
+					}
 				}
 				attLogs = append(attLogs, av)
 			}
@@ -287,19 +369,25 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := PageData{
-		IsLoggedIn:            true,
-		CurrentDate:           attendance.GetCurrentShamsiDate(),
-		TotalHours:            totalHours,
-		Message:               systemMessage,
-		CurrentUser:           username,
-		CurrentRole:           role,
-		SelectedFilter:        filterEmployee,
-		SelectedProjectFilter: filterProject,
-		SelectedMonthFilter:   filterMonth,
-		CurrentTab:            currentTab,
-		WorkLogs:              workLogs,
-		AttendanceLogs:        attLogs,
-		EditLog:               editLog,
+		IsLoggedIn:              true,
+		CurrentDate:             currentShamsiDate,
+		TotalHours:              totalHours,
+		Message:                 systemMessage,
+		CurrentUser:             username,
+		CurrentRole:             role,
+		SelectedFilter:          filterEmployee,
+		SelectedProjectFilter:   filterProject,
+		SelectedMonthFilter:     filterMonth,
+		CurrentTab:              currentTab,
+		WorkLogs:                workLogs,
+		AttendanceLogs:          attLogs,
+		EditLog:                 editLog,
+		EditAttendanceLog:       editAttendanceLog,
+		// فرمت خروجی مجموع عملکردها به صورت تجمعی صنعتی (مثلاً 144:50)
+		TotalAttendanceMonthStr: fmt.Sprintf("%d:%02d", totalMinutesMonth/60, totalMinutesMonth%60),
+		TotalAttendanceDayStr:   fmt.Sprintf("%d:%02d", totalMinutesDay/60, totalMinutesDay%60),
+		Projects:                projects,
+		Employees:               employees,
 	}
 	systemMessage = ""
 
@@ -320,17 +408,12 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		username := r.FormValue("username")
 		password := r.FormValue("password")
-		
 		var dbUser, hashedPass string
-		// استخراج یوزر و هش کلمه عبور جهت مقایسه امن
 		err := database.DB.QueryRow(r.Context(), "SELECT employee_code, password FROM employees WHERE employee_code = $1;", username).Scan(&dbUser, &hashedPass)
-		
 		if err == nil && dbUser != "" && bcrypt.CompareHashAndPassword([]byte(hashedPass), []byte(password)) == nil {
-			// صدور کوکی مجهز به امضای دیجیتال غیرقابل جعل
-			secureValue := signCookieValue(username)
 			http.SetCookie(w, &http.Cookie{
 				Name:     "session_user",
-				Value:    secureValue,
+				Value:    signCookieValue(username),
 				Expires:  time.Now().Add(24 * time.Hour),
 				HttpOnly: true,
 				Path:     "/",
@@ -401,7 +484,6 @@ func handleLogWork(w http.ResponseWriter, r *http.Request) {
 		desc := r.FormValue("description")
 		sDate := r.FormValue("shamsi_date")
 
-		// رفع باگ ۲: پایش خطا و ست کردن سیستم مسج بجای نادیده گرفتن
 		err := project.LogWorkWithDate(username, pID, hours, desc, sDate)
 		if err != nil {
 			systemMessage = "⚠️ خطا در ثبت کارکرد روزانه: " + err.Error()
@@ -438,6 +520,33 @@ func handleManualAttendance(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/?tab="+tab, http.StatusSeeOther)
 }
 
+func handleEditAttendance(w http.ResponseWriter, r *http.Request) {
+	username, role := getAuthenticatedUser(r)
+	tab := r.FormValue("tab")
+	if tab == "" {
+		tab = "attendance"
+	}
+	if username != "" {
+		attID, _ := strconv.Atoi(r.FormValue("attendance_id"))
+		sDate := r.FormValue("shamsi_date")
+		tIn := r.FormValue("check_in_time")
+		tOut := r.FormValue("check_out_time")
+		target := r.FormValue("target_employee")
+
+		if role != "ADMIN" || target == "" {
+			target = username
+		}
+
+		err := attendance.UpdateAttendance(attID, target, sDate, tIn, tOut)
+		if err != nil {
+			systemMessage = "⚠️ خطا در اعمال ویرایش تردد: " + err.Error()
+		} else {
+			systemMessage = "رکورد تردد انتخاب‌شده با موفقیت بازنویسی و اصلاح شد."
+		}
+	}
+	http.Redirect(w, r, "/?tab="+tab, http.StatusSeeOther)
+}
+
 func handleEditWorkLog(w http.ResponseWriter, r *http.Request) {
 	username, _ := getAuthenticatedUser(r)
 	tab := r.FormValue("tab")
@@ -451,7 +560,6 @@ func handleEditWorkLog(w http.ResponseWriter, r *http.Request) {
 		desc := r.FormValue("description")
 		sDate := r.FormValue("shamsi_date")
 
-		// رفع باگ ۲: پایش خطا به جای استفاده از دیسکارد
 		err := project.UpdateWorkLog(logID, pID, hours, desc, sDate)
 		if err != nil {
 			systemMessage = "⚠️ خطا در ویرایش رکورد: " + err.Error()
@@ -470,8 +578,6 @@ func handleDeleteWorkLog(w http.ResponseWriter, r *http.Request) {
 	}
 	if username != "" {
 		logID, _ := strconv.Atoi(r.URL.Query().Get("id"))
-		
-		// رفع باگ ۲: مدیریت خطای لایه آمار حذف کارکرد
 		err := project.DeleteWorkLog(logID)
 		if err != nil {
 			systemMessage = "⚠️ خطا در حذف کارکرد: " + err.Error()
@@ -490,8 +596,6 @@ func handleDeleteAttendance(w http.ResponseWriter, r *http.Request) {
 	}
 	if username != "" {
 		attID, _ := strconv.Atoi(r.URL.Query().Get("id"))
-		
-		// رفع باگ ۴: تغییر به کانتکست لایو زنده درخواست مرورگر
 		_, err := database.DB.Exec(r.Context(), "DELETE FROM attendance WHERE id = $1;", attID)
 		if err != nil {
 			systemMessage = "خطا در حذف تردد: " + err.Error()
@@ -514,10 +618,9 @@ func handleAddEmployee(w http.ResponseWriter, r *http.Request) {
 		fullName := r.FormValue("full_name")
 		uRole := r.FormValue("role")
 
-		// هش کردن رمز عبور کاربر جدید قبل از ذخیره‌سازی در پایگاه داده با استاندارد صنعتی Bcrypt
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
-			systemMessage = "خطا در پردازش و رمزنگاری کلمه عبور امن پرسنل."
+			systemMessage = "خطا در پردازش رمز عبور"
 			http.Redirect(w, r, "/?tab="+tab, http.StatusSeeOther)
 			return
 		}
@@ -527,7 +630,70 @@ func handleAddEmployee(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			systemMessage = "خطا در ثبت پرسنل جدید: " + err.Error()
 		} else {
-			systemMessage = fmt.Sprintf("موفقیت: نیروی جدید با نام «%s» استخدام شد.", fullName)
+			systemMessage = fmt.Sprintf("موفقیت: نیرو با نام «%s» استخدام شد.", fullName)
+		}
+	}
+	http.Redirect(w, r, "/?tab="+tab, http.StatusSeeOther)
+}
+
+func handleDeleteEmployee(w http.ResponseWriter, r *http.Request) {
+	_, role := getAuthenticatedUser(r)
+	tab := r.URL.Query().Get("tab")
+	if tab == "" {
+		tab = "management"
+	}
+	if role == "ADMIN" {
+		empID, _ := strconv.Atoi(r.URL.Query().Get("id"))
+
+		var empCode string
+		_ = database.DB.QueryRow(r.Context(), "SELECT employee_code FROM employees WHERE id = $1;", empID).Scan(&empCode)
+		if empCode == "ADMIN" {
+			systemMessage = "⚠️ خطای امنیتی: شما مجاز به حذف حساب کاربری ارشد ارگان (ADMIN) نیستید!"
+		} else {
+			_, err := database.DB.Exec(r.Context(), "DELETE FROM employees WHERE id = $1;", empID)
+			if err != nil {
+				systemMessage = "⚠️ خطا در حذف کارمند: " + err.Error()
+			} else {
+				systemMessage = "نیروی انتخابی با موفقیت از سیستم حذف شد."
+			}
+		}
+	}
+	http.Redirect(w, r, "/?tab="+tab, http.StatusSeeOther)
+}
+
+func handleCreateProject(w http.ResponseWriter, r *http.Request) {
+	_, role := getAuthenticatedUser(r)
+	tab := r.FormValue("tab")
+	if tab == "" {
+		tab = "management"
+	}
+	if role == "ADMIN" && r.Method == http.MethodPost {
+		name := r.FormValue("project_name")
+		if name != "" {
+			_, err := project.CreateProject(name)
+			if err != nil {
+				systemMessage = "⚠️ خطا در افزودن پروژه: " + err.Error()
+			} else {
+				systemMessage = fmt.Sprintf("پروژه جدید با نام «%s» در پایگاه داده ایجاد شد.", name)
+			}
+		}
+	}
+	http.Redirect(w, r, "/?tab="+tab, http.StatusSeeOther)
+}
+
+func handleDeleteProject(w http.ResponseWriter, r *http.Request) {
+	_, role := getAuthenticatedUser(r)
+	tab := r.URL.Query().Get("tab")
+	if tab == "" {
+		tab = "management"
+	}
+	if role == "ADMIN" {
+		pID, _ := strconv.Atoi(r.URL.Query().Get("id"))
+		err := project.DeleteProject(pID)
+		if err != nil {
+			systemMessage = "⚠️ خطا در حذف پروژه: " + err.Error()
+		} else {
+			systemMessage = "پروژه و تمامی تاریخچه گزارش کارکردهای متصل به آن کاملاً پاکسازی شدند."
 		}
 	}
 	http.Redirect(w, r, "/?tab="+tab, http.StatusSeeOther)
@@ -549,11 +715,19 @@ func handleExportExcel(w http.ResponseWriter, r *http.Request) {
 		targetExcelUser = username
 	}
 
+	f := excelize.NewFile()
+	sheetWork := "گزارش کارکرد پروژه‌ها"
+	f.SetSheetName("Sheet1", sheetWork)
+	f.SetCellValue(sheetWork, "A1", "کد کارمند")
+	f.SetCellValue(sheetWork, "B1", "تاریخ شمسی")
+	f.SetCellValue(sheetWork, "C1", "نام پروژه")
+	f.SetCellValue(sheetWork, "D1", "مدت زمان (ساعت)")
+	f.SetCellValue(sheetWork, "E1", "شرح فعالیت روزانه")
+
 	logQuery := `SELECT w.employee_code, w.shamsi_date, p.name, w.hours_spent, w.description 
                  FROM work_logs w JOIN projects p ON w.project_id = p.id WHERE 1=1 `
 	var args []interface{}
 	argIdx := 1
-
 	if role != "ADMIN" || targetExcelUser != "" {
 		logQuery += fmt.Sprintf("AND w.employee_code = $%d ", argIdx)
 		args = append(args, targetExcelUser)
@@ -572,40 +746,101 @@ func handleExportExcel(w http.ResponseWriter, r *http.Request) {
 	logQuery += "ORDER BY w.shamsi_date DESC;"
 
 	rows, err := database.DB.Query(r.Context(), logQuery, args...)
-	if err != nil {
-		http.Error(w, "خطا در واکشی داده‌های اکسل", http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
-
-	f := excelize.NewFile()
-	sheetName := "گزارش ماتریسی کارکرد"
-	f.SetSheetName("Sheet1", sheetName)
-
-	f.SetCellValue(sheetName, "A1", "کد کارمند")
-	f.SetCellValue(sheetName, "B1", "تاریخ شمسی")
-	f.SetCellValue(sheetName, "C1", "نام پروژه")
-	f.SetCellValue(sheetName, "D1", "مدت زمان (ساعت)")
-	f.SetCellValue(sheetName, "E1", "شرح فعالیت روزانه")
-
-	rowIdx := 2
-	for rows.Next() {
-		var empCode, sDate, pName, desc string
-		var hours float64
-		if err := rows.Scan(&empCode, &sDate, &pName, &hours, &desc); err == nil {
-			f.SetCellValue(sheetName, fmt.Sprintf("A%d", rowIdx), empCode)
-			f.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), sDate)
-			f.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), pName)
-			f.SetCellValue(sheetName, fmt.Sprintf("D%d", rowIdx), hours)
-			f.SetCellValue(sheetName, fmt.Sprintf("E%d", rowIdx), desc)
-			rowIdx++
+	if err == nil {
+		rowIdx := 2
+		for rows.Next() {
+			var empCode, sDate, pName, desc string
+			var hours float64
+			if err := rows.Scan(&empCode, &sDate, &pName, &hours, &desc); err == nil {
+				f.SetCellValue(sheetWork, fmt.Sprintf("A%d", rowIdx), empCode)
+				f.SetCellValue(sheetWork, fmt.Sprintf("B%d", rowIdx), sDate)
+				f.SetCellValue(sheetWork, fmt.Sprintf("C%d", rowIdx), pName)
+				f.SetCellValue(sheetWork, fmt.Sprintf("D%d", rowIdx), hours)
+				f.SetCellValue(sheetWork, fmt.Sprintf("E%d", rowIdx), desc)
+				rowIdx++
+			}
 		}
+		rows.Close()
+	}
+
+	sheetAtt := "گزارش حضور و غیاب"
+	f.NewSheet(sheetAtt)
+	f.SetCellValue(sheetAtt, "A1", "کد نیرو")
+	f.SetCellValue(sheetAtt, "B1", "تاریخ شمسی")
+	f.SetCellValue(sheetAtt, "C1", "ساعت ورود")
+	f.SetCellValue(sheetAtt, "D1", "ساعت خروج")
+	f.SetCellValue(sheetAtt, "E1", "مدت زمان حضور")
+
+	var attQuery string
+	var attArgs []interface{}
+	attArgIdx := 1
+	if role == "ADMIN" && targetExcelUser == "" {
+		attQuery = "SELECT id, employee_code, check_in, check_out, shamsi_date FROM attendance WHERE 1=1 "
+	} else {
+		attQuery = "SELECT id, employee_code, check_in, check_out, shamsi_date FROM attendance WHERE employee_code = $1 "
+		attArgs = append(attArgs, targetExcelUser)
+		attArgIdx++
+	}
+	if filterMonth != "" {
+		attQuery += fmt.Sprintf("AND split_part(shamsi_date, '/', 2) = $%d ", attArgIdx)
+		attArgs = append(attArgs, filterMonth)
+	}
+	attQuery += "ORDER BY shamsi_date DESC, id DESC;"
+
+	currentShamsiDate := attendance.GetCurrentShamsiDate()
+	totalMinutesMonth := 0
+	totalMinutesDay := 0
+
+	aRows, err := database.DB.Query(r.Context(), attQuery, attArgs...)
+	if err == nil {
+		rowIdx := 2
+		for aRows.Next() {
+			var id int
+			var empCode, sDate string
+			var tIn, tOut *time.Time
+			if err := aRows.Scan(&id, &empCode, &tIn, &tOut, &sDate); err == nil {
+				strIn, strOut, strDuration := "--", "--", "حضور زنده"
+				if tIn != nil {
+					strIn = tIn.In(time.Local).Format("15:04") // ویرایش خروجی اکسل بدون ثانیه
+				}
+				if tOut != nil {
+					strOut = tOut.In(time.Local).Format("15:04") // ویرایش خروجی اکسل بدون ثانیه
+					diff := tOut.Sub(*tIn)
+					totalMinutesMonth += int(diff.Minutes())
+					if sDate == currentShamsiDate {
+						totalMinutesDay += int(diff.Minutes())
+					}
+					strDuration = fmt.Sprintf("%d:%02d", int(diff.Hours()), int(diff.Minutes())%60)
+				} else if tIn != nil {
+					diff := time.Now().Sub(*tIn)
+					totalMinutesMonth += int(diff.Minutes())
+					if sDate == currentShamsiDate {
+						totalMinutesDay += int(diff.Minutes())
+					}
+				}
+
+				f.SetCellValue(sheetAtt, fmt.Sprintf("A%d", rowIdx), empCode)
+				f.SetCellValue(sheetAtt, fmt.Sprintf("B%d", rowIdx), sDate)
+				f.SetCellValue(sheetAtt, fmt.Sprintf("C%d", rowIdx), strIn)
+				f.SetCellValue(sheetAtt, fmt.Sprintf("D%d", rowIdx), strOut)
+				f.SetCellValue(sheetAtt, fmt.Sprintf("E%d", rowIdx), strDuration)
+				rowIdx++
+			}
+		}
+		aRows.Close()
+
+		// فرمت خروجی نهایی تجمعی در انتهای فایل اکسل (مثلاً 144:50)
+		rowIdx += 2
+		f.SetCellValue(sheetAtt, fmt.Sprintf("A%d", rowIdx), "جمع کل حضور فیلتر ماه:")
+		f.SetCellValue(sheetAtt, fmt.Sprintf("B%d", rowIdx), fmt.Sprintf("%d:%02d", totalMinutesMonth/60, totalMinutesMonth%60))
+		rowIdx++
+		f.SetCellValue(sheetAtt, fmt.Sprintf("A%d", rowIdx), "جمع کل حضور امروز:")
+		f.SetCellValue(sheetAtt, fmt.Sprintf("B%d", rowIdx), fmt.Sprintf("%d:%02d", totalMinutesDay/60, totalMinutesDay%60))
 	}
 
 	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 	w.Header().Set("Content-Disposition", "attachment; filename=shamsi_matrix_report.xlsx")
 	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
-
 	if _, err := f.WriteTo(w); err != nil {
 		log.Printf("خطا در ارسال فایل: %v", err)
 	}

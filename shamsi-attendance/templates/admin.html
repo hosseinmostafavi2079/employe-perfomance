@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>کنترل پنل مدیریت ارشد سازمان</title>
-    <link rel="stylesheet" href="https://unpkg.com/@majidhajian/jalali-datepicker/dist/jalali-datepicker.min.css">
+    <link rel="stylesheet" href="/static/css/jalali-datepicker.min.css">
     <link rel="stylesheet" href="/static/css/theme.css">
 </head>
 <body>
@@ -76,7 +76,6 @@
         </div>
         {{end}}
 
-        <!-- تب اول: حضور و غیاب کل سازمان -->
         {{if eq .CurrentTab "attendance"}}
         <div class="layout-2 mobile-actions-first">
 
@@ -87,8 +86,26 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
                             <span class="card__title">ترددهای کل سازمان</span>
                         </div>
+                        
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-left: auto; margin-right: 15px;">
+                            <span style="background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 6px; font-size: 11px; border: 1px solid rgba(255,255,255,0.1);">
+                                حضور کل ماه: <b style="color: var(--amber);" class="tabular">{{.TotalAttendanceMonthStr}}</b>
+                            </span>
+                            <span style="background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 6px; font-size: 11px; border: 1px solid rgba(255,255,255,0.1);">
+                                حضور امروز: <b style="color: #818cf8;" class="tabular">{{.TotalAttendanceDayStr}}</b>
+                            </span>
+                        </div>
+
                         <form action="/" method="GET" class="filter-form">
                             <input type="hidden" name="tab" value="attendance">
+                            
+                            <select name="filter_employee">
+                                <option value="">همهٔ کارکنان سازمان</option>
+                                {{range .Employees}}
+                                <option value="{{.EmployeeCode}}" {{if eq $.SelectedFilter .EmployeeCode}}selected{{end}}>{{.FullName}} ({{.EmployeeCode}})</option>
+                                {{end}}
+                            </select>
+
                             <select name="filter_month">
                                 <option value="">همهٔ ماه‌های سال</option>
                                 <option value="01" {{if eq .SelectedMonthFilter "01"}}selected{{end}}>فروردین</option>
@@ -129,6 +146,11 @@
                                         {{if .CheckOut}}<span class="cell-strong tabular">{{.Duration}}</span>{{else}}<span class="text-faint">{{.Duration}}</span>{{end}}
                                     </td>
                                     <td data-label="عملیات" class="cell-actions">
+                                        <a href="/?edit_attendance_id={{.ID}}&tab=attendance" class="btn-link edit" style="color: #818cf8;">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                            ویرایش
+                                        </a>
+                                        <span class="cell-sep"></span>
                                         <a href="/delete-attendance?id={{.ID}}&tab=attendance" onclick="return confirm('آیا از حذف این تردد مطمئن هستید؟')" class="btn-link danger">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>
                                             حذف
@@ -147,7 +169,7 @@
                 </div>
             </div>
 
-            <div class="stack">
+            <div class="container-sidebar stack">
                 <div class="card card__pad">
                     <div class="card__head-text" style="margin-bottom:16px;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
@@ -171,6 +193,43 @@
                     </div>
                 </div>
 
+                {{if .EditAttendanceLog}}
+                <div class="card card__pad" style="border-color: #818cf8;">
+                    <div class="card__head-text" style="margin-bottom:16px; justify-content: space-between; display: flex; width: 100%;">
+                        <span style="display: flex; align-items: center; gap: 8px;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                            <span class="card__title" style="color: #818cf8;">اصلاح و ویرایش رکورد تردد</span>
+                        </span>
+                        <a href="/?tab=attendance" style="font-size: 12px; color: var(--text-faint); text-decoration: none;">✕ لغو</a>
+                    </div>
+                    <form action="/edit-attendance" method="POST" class="form">
+                        <input type="hidden" name="tab" value="attendance">
+                        <input type="hidden" name="attendance_id" value="{{.EditAttendanceLog.ID}}">
+                        <div class="field">
+                            <label>کد پرسنلی کارمند هدف</label>
+                            <input type="text" name="target_employee" value="{{.EditAttendanceLog.EmployeeCode}}" required>
+                        </div>
+                        <div class="field">
+                            <label>تاریخ روز (شمسی)</label>
+                            <input type="text" name="shamsi_date" value="{{.EditAttendanceLog.ShamsiDate}}" data-jdp required class="tabular">
+                        </div>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>ساعت ورود</label>
+                                <input type="text" name="check_in_time" value="{{.EditAttendanceLog.CheckIn}}" placeholder="8:35" required class="tabular">
+                            </div>
+                            <div class="field">
+                                <label>ساعت خروج</label>
+                                <input type="text" name="check_out_time" value="{{.EditAttendanceLog.CheckOut}}" placeholder="17:00" class="tabular">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="background-color: #6366f1;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>
+                            ذخیره تغییرات تردد
+                        </button>
+                    </form>
+                </div>
+                {{else}}
                 <div class="card card__pad">
                     <div class="card__head-text" style="margin-bottom:16px;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2.4"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>
@@ -189,7 +248,7 @@
                         <div class="field-row">
                             <div class="field">
                                 <label>ساعت ورود</label>
-                                <input type="text" name="check_in_time" placeholder="08:00" required class="tabular">
+                                <input type="text" name="check_in_time" placeholder="8:35" required class="tabular">
                             </div>
                             <div class="field">
                                 <label>ساعت خروج</label>
@@ -202,11 +261,11 @@
                         </button>
                     </form>
                 </div>
+                {{end}}
             </div>
         </div>
         {{end}}
 
-        <!-- تب دوم: گزارش کارکرد شخصی مدیر -->
         {{if eq .CurrentTab "worklog"}}
         <div class="layout-2 reverse">
 
@@ -226,9 +285,9 @@
                         <div class="field">
                             <label>پروژهٔ هدف</label>
                             <select name="project_id">
-                                <option value="1" {{if eq .EditLog.ProjectID 1}}selected{{end}}>توسعه پلتفرم هوش مصنوعی</option>
-                                <option value="2" {{if eq .EditLog.ProjectID 2}}selected{{end}}>توسعه هسته Go</option>
-                                <option value="3" {{if eq .EditLog.ProjectID 3}}selected{{end}}>طراحی دیتابیس داکر</option>
+                                {{range .Projects}}
+                                <option value="{{.ID}}" {{if eq $.EditLog.ProjectID .ID}}selected{{end}}>{{.Name}}</option>
+                                {{end}}
                             </select>
                         </div>
                         <div class="field-row">
@@ -262,9 +321,9 @@
                         <div class="field">
                             <label>انتخاب پروژه</label>
                             <select name="project_id">
-                                <option value="1">توسعه پلتفرم هوش مصنوعی</option>
-                                <option value="2">توسعه هسته Go</option>
-                                <option value="3">طراحی دیتابیس داکر</option>
+                                {{range .Projects}}
+                                <option value="{{.ID}}">{{.Name}}</option>
+                                {{end}}
                             </select>
                         </div>
                         <div class="field-row">
@@ -352,9 +411,8 @@
         </div>
         {{end}}
 
-        <!-- تب سوم: مدیریت پرسنل -->
         {{if eq .CurrentTab "management"}}
-        <div class="layout-2 reverse">
+        <div class="layout-2">
             <div class="stack">
                 <div class="card card__pad" style="background:linear-gradient(180deg, var(--surface), var(--surface-2)); border-color:var(--border-strong);">
                     <div class="card__head-text" style="margin-bottom:16px;">
@@ -388,17 +446,81 @@
                         </button>
                     </form>
                 </div>
+
+                <div class="card card__pad" style="border-color:var(--border-strong);">
+                    <div class="card__head-text" style="margin-bottom:16px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--indigo)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                        <span class="card__title">تعریف پروژه جدید سازمان</span>
+                    </div>
+                    <form action="/admin/create-project" method="POST" class="form">
+                        <input type="hidden" name="tab" value="management">
+                        <div class="field">
+                            <label>نام اختصاصی پروژه</label>
+                            <input type="text" name="project_name" placeholder="مثلاً توسعه فرانت‌اند" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="background-color: var(--indigo);">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>
+                            ثبت و ساخت پروژه
+                        </button>
+                    </form>
+                </div>
             </div>
+
             <div class="stack">
-                <div class="card notice-block" style="min-height:100%;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19V9"/><path d="M11 19V5"/><path d="M18 19v-7"/><path d="M3 19h18"/></svg>
-                    <p>برای رصد و فیلترینگ ماتریسی ریز کارکرد پرسنل سازمان یا استخراج خروجی اکسل تخصصی، از تب «پایش ماهانهٔ پروژه‌ها» استفاده کنید.</p>
+                <div class="card">
+                    <div class="card__head"><span class="card__title">لیست کارکنان فعال ارگان</span></div>
+                    <div class="table-wrap">
+                        <table class="dt">
+                            <thead>
+                                <tr><th>کد نیرو</th><th>نام پرسنل</th><th>نقش سیستم</th><th style="text-align:center;">اقدامات</th></tr>
+                            </thead>
+                            <tbody>
+                                {{range .Employees}}
+                                <tr>
+                                    <td class="cell-strong">{{.EmployeeCode}}</td>
+                                    <td>{{.FullName}}</td>
+                                    <td><span class="tag">{{.Role}}</span></td>
+                                    <td class="cell-actions" style="text-align:center;">
+                                        {{if ne .EmployeeCode "ADMIN"}}
+                                        <a href="/admin/delete-employee?id={{.ID}}&tab=management" onclick="return confirm('آیا از خروج و حذف کامل این نیرو اطمینان دارید؟')" class="btn-link danger">حذف نیرو</a>
+                                        {{else}}
+                                        <span class="text-faint">غیرقابل حذف</span>
+                                        {{end}}
+                                    </td>
+                                </tr>
+                                {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card__head"><span class="card__title">لیست پروژه‌های فعال سازمان</span></div>
+                    <div class="table-wrap">
+                        <table class="dt">
+                            <thead>
+                                <tr><th>شناسه</th><th>عنوان پروژه</th><th style="text-align:center;">عملیات</th></tr>
+                            </thead>
+                            <tbody>
+                                {{range .Projects}}
+                                <tr>
+                                    <td class="tabular text-faint">{{.ID}}</td>
+                                    <td class="cell-strong">{{.Name}}</td>
+                                    <td class="cell-actions" style="text-align:center;">
+                                        <a href="/admin/delete-project?id={{.ID}}&tab=management" onclick="return confirm('هشدار: حذف پروژه تمامی ریز گزارش کارکردهای متصل به آن را در کل سیستم پاک می‌کند. آیا مطمئن هستید؟')" class="btn-link danger">حذف کامل پروژه</a>
+                                    </td>
+                                </tr>
+                                {{else}}
+                                <tr class="empty-row"><td colspan="3">هیچ پروژه تعریفی یافت نشد.</td></tr>
+                                {{end}}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
         {{end}}
 
-        <!-- تب چهارم: گزارش ماتریسی ماه‌ها و پروژه‌ها -->
         {{if eq .CurrentTab "project_report"}}
         <div class="stack">
             <div class="card card__pad">
@@ -408,17 +530,18 @@
                         <label>فیلتر پرسنل سازمان</label>
                         <select name="filter_employee">
                             <option value="">همهٔ کارکنان سازمان</option>
-                            <option value="EMP-1001" {{if eq .SelectedFilter "EMP-1001"}}selected{{end}}>کارمند (EMP-1001)</option>
-                            <option value="ADMIN" {{if eq .SelectedFilter "ADMIN"}}selected{{end}}>مدیریت کل (ADMIN)</option>
+                            {{range .Employees}}
+                            <option value="{{.EmployeeCode}}" {{if eq $.SelectedFilter .EmployeeCode}}selected{{end}}>{{.FullName}} ({{.EmployeeCode}})</option>
+                            {{end}}
                         </select>
                     </div>
                     <div class="field">
                         <label>فیلتر پروژهٔ هدف</label>
                         <select name="filter_project">
                             <option value="">همهٔ پروژه‌های فعال</option>
-                            <option value="1" {{if eq .SelectedProjectFilter "1"}}selected{{end}}>توسعه پلتفرم هوش مصنوعی</option>
-                            <option value="2" {{if eq .SelectedProjectFilter "2"}}selected{{end}}>توسعه هسته Go</option>
-                            <option value="3" {{if eq .SelectedProjectFilter "3"}}selected{{end}}>طراحی دیتابیس داکر</option>
+                            {{range .Projects}}
+                            <option value="{{.ID}}" {{if eq $.SelectedProjectFilter (printf "%d" .ID)}}selected{{end}}>{{.Name}}</option>
+                            {{end}}
                         </select>
                     </div>
                     <div class="field">
@@ -507,7 +630,16 @@
     </main>
 </div>
 
-<script src="https://unpkg.com/@majidhajian/jalali-datepicker/dist/jalali-datepicker.min.js"></script>
+<script src="/static/js/jalali-datepicker.min.js"></script>
+<script>
+    // فعال‌سازی تقویم در یک بلاک امن به محض لود کامل ساختار صفحه
+    document.addEventListener("DOMContentLoaded", function() {
+        jalaliDatepicker.start({
+            showTodayBtn: true,
+            hideAfterSelect: true
+        });
+    });
+</script>
 <script src="/static/js/app.js"></script>
 </body>
 </html>

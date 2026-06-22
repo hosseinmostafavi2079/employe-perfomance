@@ -39,6 +39,19 @@ func CreateProject(name string) (int, error) {
 	return projectID, nil
 }
 
+// DeleteProject وظیفه حذف کامل پروژه و پاکسازی آبشاری کارکردهای متصل به آن را دارد
+func DeleteProject(id int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	query := "DELETE FROM projects WHERE id = $1;"
+	_, err := database.DB.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("خطا در حذف پروژه از پایگاه داده: %v", err)
+	}
+	return nil
+}
+
 // LogWorkWithDate وظیفه ثبت کارکرد روزانه (برای امروز یا تاریخ‌های گذشته) را دارد
 func LogWorkWithDate(employeeCode string, projectID int, hours float64, description string, shamsiDate string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

@@ -106,3 +106,33 @@ func AddManualAttendance(employeeCode string, shamsiDate string, checkInTime str
 	_, err = database.DB.Exec(ctx, query, employeeCode, tIn, tOut, shamsiDate)
 	return err
 }
+
+// UpdateAttendance وظیفه ویرایش و اصلاح یک رکورد تردد از قبل ثبت شده را دارد
+func UpdateAttendance(id int, employeeCode string, shamsiDate string, checkInTime string, checkOutTime string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tIn, err := ParseShamsiToTime(shamsiDate, checkInTime)
+	if err != nil {
+		return fmt.Errorf("خطا در پردازش زمان ورود: %v", err)
+	}
+
+	var query string
+	var args []interface{}
+
+	// اگر کاربر ساعت خروج را هم مشخص کرده بود، آن را پارس و ذخیره کن؛ در غیر این صورت خروج باز بماند
+	if checkOutTime != "" && checkOutTime != "--" && checkOutTime != "00:00:00" {
+		tOut, err := ParseShamsiToTime(shamsiDate, checkOutTime)
+		if err != nil {
+			return fmt.Errorf("خطا در پردازش زمان خروج: %v", err)
+		}
+		query = `UPDATE attendance SET employee_code = $1, check_in = $2, check_out = $3, shamsi_date = $4 WHERE id = $5;`
+		args = []interface{}{employeeCode, tIn, tOut, shamsiDate, id}
+	} else {
+		query = `UPDATE attendance SET employee_code = $1, check_in = $2, check_out = NULL, shamsi_date = $3 WHERE id = $4;`
+		args = []interface{}{employeeCode, tIn, shamsiDate, id}
+	}
+
+	_, err = database.DB.Exec(ctx, query, args...)
+	return err
+}
