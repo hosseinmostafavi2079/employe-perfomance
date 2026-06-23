@@ -54,7 +54,11 @@
                 </a>
                 <a href="/?tab=management" class="nav-tab {{if eq .CurrentTab "management"}}is-active{{end}}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17.5" cy="8.5" r="2.6"/><path d="M15 13.5a4.6 4.6 0 0 1 5.5 4.5"/></svg>
-                    مدیریت و استخدام
+                    مدیریت و حقوق پرسنل
+                </a>
+                <a href="/?tab=projects" class="nav-tab {{if eq .CurrentTab "projects"}}is-active{{end}}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    مدیریت پروژه‌ها
                 </a>
                 <a href="/?tab=project_report" class="nav-tab {{if eq .CurrentTab "project_report"}}is-active{{end}}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9"/><path d="M11 19V5"/><path d="M18 19v-7"/><path d="M3 19h18"/></svg>
@@ -76,9 +80,9 @@
         </div>
         {{end}}
 
+        <!-- تب اول: حضور و غیاب -->
         {{if eq .CurrentTab "attendance"}}
         <div class="layout-2 mobile-actions-first">
-
             <div class="stack">
                 <div class="card">
                     <div class="card__head">
@@ -86,26 +90,19 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
                             <span class="card__title">ترددهای کل سازمان</span>
                         </div>
-                        
                         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-left: auto; margin-right: 15px;">
                             <span style="background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 6px; font-size: 11px; border: 1px solid rgba(255,255,255,0.1);">
-                                حضور کل ماه: <b style="color: var(--amber);" class="tabular">{{.TotalAttendanceMonthStr}}</b>
-                            </span>
-                            <span style="background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 6px; font-size: 11px; border: 1px solid rgba(255,255,255,0.1);">
-                                حضور امروز: <b style="color: #818cf8;" class="tabular">{{.TotalAttendanceDayStr}}</b>
+                                حضور کل ماه: <b style="color: var(--amber);" class="tabular">{{.TotalHours}}</b> ساعت
                             </span>
                         </div>
-
                         <form action="/" method="GET" class="filter-form">
                             <input type="hidden" name="tab" value="attendance">
-                            
                             <select name="filter_employee">
                                 <option value="">همهٔ کارکنان سازمان</option>
                                 {{range .Employees}}
                                 <option value="{{.EmployeeCode}}" {{if eq $.SelectedFilter .EmployeeCode}}selected{{end}}>{{.FullName}} ({{.EmployeeCode}})</option>
                                 {{end}}
                             </select>
-
                             <select name="filter_month">
                                 <option value="">همهٔ ماه‌های سال</option>
                                 <option value="01" {{if eq .SelectedMonthFilter "01"}}selected{{end}}>فروردین</option>
@@ -146,11 +143,6 @@
                                         {{if .CheckOut}}<span class="cell-strong tabular">{{.Duration}}</span>{{else}}<span class="text-faint">{{.Duration}}</span>{{end}}
                                     </td>
                                     <td data-label="عملیات" class="cell-actions">
-                                        <a href="/?edit_attendance_id={{.ID}}&tab=attendance" class="btn-link edit" style="color: #818cf8;">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                                            ویرایش
-                                        </a>
-                                        <span class="cell-sep"></span>
                                         <a href="/delete-attendance?id={{.ID}}&tab=attendance" onclick="return confirm('آیا از حذف این تردد مطمئن هستید؟')" class="btn-link danger">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>
                                             حذف
@@ -193,43 +185,6 @@
                     </div>
                 </div>
 
-                {{if .EditAttendanceLog}}
-                <div class="card card__pad" style="border-color: #818cf8;">
-                    <div class="card__head-text" style="margin-bottom:16px; justify-content: space-between; display: flex; width: 100%;">
-                        <span style="display: flex; align-items: center; gap: 8px;">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                            <span class="card__title" style="color: #818cf8;">اصلاح و ویرایش رکورد تردد</span>
-                        </span>
-                        <a href="/?tab=attendance" style="font-size: 12px; color: var(--text-faint); text-decoration: none;">✕ لغو</a>
-                    </div>
-                    <form action="/edit-attendance" method="POST" class="form">
-                        <input type="hidden" name="tab" value="attendance">
-                        <input type="hidden" name="attendance_id" value="{{.EditAttendanceLog.ID}}">
-                        <div class="field">
-                            <label>کد پرسنلی کارمند هدف</label>
-                            <input type="text" name="target_employee" value="{{.EditAttendanceLog.EmployeeCode}}" required>
-                        </div>
-                        <div class="field">
-                            <label>تاریخ روز (شمسی)</label>
-                            <input type="text" name="shamsi_date" value="{{.EditAttendanceLog.ShamsiDate}}" data-jdp required class="tabular">
-                        </div>
-                        <div class="field-row">
-                            <div class="field">
-                                <label>ساعت ورود</label>
-                                <input type="text" name="check_in_time" value="{{.EditAttendanceLog.CheckIn}}" placeholder="8:35" required class="tabular">
-                            </div>
-                            <div class="field">
-                                <label>ساعت خروج</label>
-                                <input type="text" name="check_out_time" value="{{.EditAttendanceLog.CheckOut}}" placeholder="17:00" class="tabular">
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary" style="background-color: #6366f1;">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>
-                            ذخیره تغییرات تردد
-                        </button>
-                    </form>
-                </div>
-                {{else}}
                 <div class="card card__pad">
                     <div class="card__head-text" style="margin-bottom:16px;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2.4"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>
@@ -261,14 +216,13 @@
                         </button>
                     </form>
                 </div>
-                {{end}}
             </div>
         </div>
         {{end}}
 
+        <!-- تب دوم: گزارش کارکرد مدیر -->
         {{if eq .CurrentTab "worklog"}}
         <div class="layout-2 reverse">
-
             <div class="stack">
                 {{if .EditLog}}
                 <div class="card card__pad" style="border-color:var(--indigo);">
@@ -285,9 +239,9 @@
                         <div class="field">
                             <label>پروژهٔ هدف</label>
                             <select name="project_id">
-                                {{range .Projects}}
-                                <option value="{{.ID}}" {{if eq $.EditLog.ProjectID .ID}}selected{{end}}>{{.Name}}</option>
-                                {{end}}
+                                <option value="1" {{if eq .EditLog.ProjectID 1}}selected{{end}}>توسعه پلتفرم هوش مصنوعی</option>
+                                <option value="2" {{if eq .EditLog.ProjectID 2}}selected{{end}}>توسعه هسته Go</option>
+                                <option value="3" {{if eq .EditLog.ProjectID 3}}selected{{end}}>طراحی دیتابیس داکر</option>
                             </select>
                         </div>
                         <div class="field-row">
@@ -321,9 +275,9 @@
                         <div class="field">
                             <label>انتخاب پروژه</label>
                             <select name="project_id">
-                                {{range .Projects}}
-                                <option value="{{.ID}}">{{.Name}}</option>
-                                {{end}}
+                                <option value="1">توسعه پلتفرم هوش مصنوعی</option>
+                                <option value="2">توسعه هسته Go</option>
+                                <option value="3">طراحی دیتابیس داکر</option>
                             </select>
                         </div>
                         <div class="field-row">
@@ -411,9 +365,11 @@
         </div>
         {{end}}
 
+        <!-- تب سوم: مدیریت کارکنان و سیستم حقوق و مرخصی -->
         {{if eq .CurrentTab "management"}}
         <div class="layout-2">
             <div class="stack">
+                <!-- فرم ۱: استخدام نیروی جدید -->
                 <div class="card card__pad" style="background:linear-gradient(180deg, var(--surface), var(--surface-2)); border-color:var(--border-strong);">
                     <div class="card__head-text" style="margin-bottom:16px;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17.5" cy="8.5" r="2.6"/><path d="M15 13.5a4.6 4.6 0 0 1 5.5 4.5"/></svg>
@@ -447,25 +403,149 @@
                     </form>
                 </div>
 
+                <!-- ⭐️ فرم ۲: مکان ویرایش اطلاعات هویتی و نقشی کارمند (ویژگی جدید درخواست شده) -->
                 <div class="card card__pad" style="border-color:var(--border-strong);">
                     <div class="card__head-text" style="margin-bottom:16px;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--indigo)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-                        <span class="card__title">تعریف پروژه جدید سازمان</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--indigo)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <span class="card__title">ویرایش مشخصات و رمز عبور پرسنل</span>
                     </div>
-                    <form action="/admin/create-project" method="POST" class="form">
+                    <form action="/admin/edit-employee" method="POST" class="form">
                         <input type="hidden" name="tab" value="management">
                         <div class="field">
-                            <label>نام اختصاصی پروژه</label>
-                            <input type="text" name="project_name" placeholder="مثلاً توسعه فرانت‌اند" required>
+                            <label>کد پرسنلی کارمند مورد نظر (جهت تطابق)</label>
+                            <input type="text" name="emp_code" placeholder="مثلاً EMP-1001" required>
+                        </div>
+                        <div class="field">
+                            <label>نام و نام خانوادگی جدید</label>
+                            <input type="text" name="full_name" placeholder="تغییر نام یا اصلاح مشخصات">
+                        </div>
+                        <div class="field">
+                            <label>کلمه عبور جدید (در صورت نیاز به تغییر)</label>
+                            <input type="password" name="password" placeholder="گذرواژه جدید امن">
+                        </div>
+                        <div class="field">
+                            <label>تغییر نقش دسترسی</label>
+                            <select name="role">
+                                <option value="EMPLOYEE">کارمند عادی واحد پرسنلی</option>
+                                <option value="ADMIN">مدیر ارشد کل سیستم</option>
+                            </select>
                         </div>
                         <button type="submit" class="btn btn-primary" style="background-color: var(--indigo);">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>
-                            ثبت و ساخت پروژه
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
+                            بروزرسانی مشخصات پرسنل
+                        </button>
+                    </form>
+                </div>
+
+                <!-- فرم ۳: تنظیم و ویرایش پروفایل مالی و مرخصی پرسنل -->
+                <div class="card card__pad" style="border-color:var(--border-strong);">
+                    <div class="card__head-text" style="margin-bottom:16px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--indigo)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                        <span class="card__title">تنظیم و پیکربندی پروفایل حقوقی پرسنل</span>
+                    </div>
+                    <form action="/admin/payroll/save-profile" method="POST" class="form">
+                        <div class="field-row">
+                            <div class="field">
+                                <label>کد پرسنلی نیرو هدف</label>
+                                <input type="text" name="employee_code" placeholder="مثلاً EMP-1001" required>
+                            </div>
+                            <div class="field">
+                                <label>نوع قرارداد و بستر حقوقی</label>
+                                <select name="contract_type">
+                                    <option value="REGULAR">رسمی قانون کار (بیمه‌ای)</option>
+                                    <option value="HOURLY">ساعتی حضور آزاد (توافقی)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>وضعیت تاهل نیرو</label>
+                                <select name="is_married">
+                                    <option value="false">مجرد / عدم مشمولیت</option>
+                                    <option value="true">متأهل (حق تاهل سال ۱۴۰۵)</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>تعداد فرزندان واجد شرایط</label>
+                                <input type="number" name="child_count" value="0" min="0" required class="tabular">
+                            </div>
+                        </div>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>سابقه و شمولیت پایه سنوات</label>
+                                <select name="eligible_for_seniority">
+                                    <option value="false">سابقه زیر یکسال (بدون سنوات)</option>
+                                    <option value="true">بالای یکسال (مشمول سنوات روزانه)</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>نرخ ساعتی اضافه‌کاری (ریال)</label>
+                                <input type="number" name="custom_overtime_rate" placeholder="مثلاً 1058470" required class="tabular">
+                            </div>
+                        </div>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>نرخ ساعت کارکرد (ویژه ساعتی-ریال)</label>
+                                <input type="number" name="hourly_rate" value="0" required class="tabular">
+                            </div>
+                            <div class="field">
+                                <label>مانده اولیه مرخصی استحقاقی (ساعت)</label>
+                                <input type="number" step="0.1" name="remaining_leave_hours" value="0.0" required class="tabular">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="background-color: var(--indigo);">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/></svg>
+                            ذخیره مشخصات مالی پرسنل
+                        </button>
+                    </form>
+                </div>
+
+                <!-- فرم ۴: محاسبه کارکرد ماهانه و صدور فیش حقوقی هوشمند -->
+                <div class="card card__pad" style="border-color:var(--border-strong);">
+                    <div class="card__head-text" style="margin-bottom:16px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                        <span class="card__title">محاسبه عملکرد و صدور فیش حقوقی (۱۴۰۵)</span>
+                    </div>
+                    <form action="/admin/payroll/issue" method="POST" class="form">
+                        <input type="hidden" name="year" value="1405">
+                        <div class="field-row">
+                            <div class="field">
+                                <label>کد پرسنلی کارمند هدف</label>
+                                <input type="text" name="employee_code" placeholder="EMP-1001" required>
+                            </div>
+                            <div class="field">
+                                <label>ماه شمسی مورد نظر</label>
+                                <select name="month">
+                                    <option value="1">فروردین</option><option value="2">اردیبهشت</option><option value="3">خرداد</option>
+                                    <option value="4">تیر</option><option value="5">مرداد</option><option value="6">شهریور</option>
+                                    <option value="7">مهر</option><option value="8">آبان</option><option value="9">آذر</option>
+                                    <option value="10">دی</option><option value="11">بهمن</option><option value="12">اسفند</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>ساعت موظفی این ماه (قانون کار)</label>
+                                <input type="number" step="0.1" name="expected_hours" placeholder="مثلاً 178" required class="tabular">
+                            </div>
+                            <div class="field">
+                                <label>کل کارکرد واقعی پر شده نیرو</label>
+                                <input type="number" step="0.1" name="actual_hours" placeholder="مثلاً 170" required class="tabular">
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>ساعات اضافه‌کاری تایید شده مدیریتی</label>
+                            <input type="number" step="0.1" name="overtime_hours" value="0.0" required class="tabular">
+                        </div>
+                        <button type="submit" class="btn btn-amber">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                            پردازش، کسر از مرخصی و صدور فیش مالی
                         </button>
                     </form>
                 </div>
             </div>
 
+            <!-- ستون چپ: لیست کارکنان فعال -->
             <div class="stack">
                 <div class="card">
                     <div class="card__head"><span class="card__title">لیست کارکنان فعال ارگان</span></div>
@@ -493,26 +573,76 @@
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+        {{end}}
 
+        <!-- ⭐️ تب چهارم: اختصاصی مدیریت پروژه‌ها (کامل تفکیک شده و دارای فرمهای ویرایش و حذف) -->
+        {{if eq .CurrentTab "projects"}}
+        <div class="layout-2">
+            <div class="stack">
+                
+                <!-- فرم ۱: ایجاد پروژه جدید -->
+                <div class="card card__pad" style="background:linear-gradient(180deg, var(--surface), var(--surface-2)); border-color:var(--border-strong);">
+                    <div class="card__head-text" style="margin-bottom:16px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        <span class="card__title">تعریف پروژه جدید سازمان</span>
+                    </div>
+                    <form action="/admin/create-project" method="POST" class="form">
+                        <input type="hidden" name="tab" value="projects">
+                        <div class="field">
+                            <label>نام اختصاصی پروژه</label>
+                            <input type="text" name="project_name" placeholder="مثلاً توسعه پلتفرم هوش مصنوعی" required>
+                        </div>
+                        <button type="submit" class="btn btn-amber">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                            ثبت و ساخت پروژه جدید
+                        </button>
+                    </form>
+                </div>
+
+                <!-- فرم ۲: ویرایش اطلاعات پروژه (درخواست شده) -->
+                <div class="card card__pad" style="border-color:var(--border-strong);">
+                    <div class="card__head-text" style="margin-bottom:16px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--indigo)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <span class="card__title">ویرایش مشخصات پروژه موجود</span>
+                    </div>
+                    <form action="/admin/edit-project" method="POST" class="form">
+                        <input type="hidden" name="tab" value="projects">
+                        <div class="field">
+                            <label>انتخاب پروژه جهت اصلاح</label>
+                            <select name="project_id">
+                                <option value="1">توسعه پلتفرم هوش مصنوعی</option>
+                                <option value="2">توسعه هسته Go</option>
+                                <option value="3">طراحی دیتابیس داکر</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>عنوان جدید پروژه</label>
+                            <input type="text" name="new_project_name" placeholder="عنوان اصلاحی پروژه" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="background-color: var(--indigo);">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 6"/></svg>
+                            اعمال تغییر نام پروژه
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+
+            <!-- ستون چپ: لیست پروژه ها و دکمه حذف تفکیکی -->
+            <div class="stack">
                 <div class="card">
                     <div class="card__head"><span class="card__title">لیست پروژه‌های فعال سازمان</span></div>
                     <div class="table-wrap">
                         <table class="dt">
                             <thead>
-                                <tr><th>شناسه</th><th>عنوان پروژه</th><th style="text-align:center;">عملیات</th></tr>
+                                <tr><th>شناسه پروژه</th><th>عنوان رسمی پروژه</th><th style="text-align:center;">عملیات تخریب</th></tr>
                             </thead>
                             <tbody>
-                                {{range .Projects}}
-                                <tr>
-                                    <td class="tabular text-faint">{{.ID}}</td>
-                                    <td class="cell-strong">{{.Name}}</td>
-                                    <td class="cell-actions" style="text-align:center;">
-                                        <a href="/admin/delete-project?id={{.ID}}&tab=management" onclick="return confirm('هشدار: حذف پروژه تمامی ریز گزارش کارکردهای متصل به آن را در کل سیستم پاک می‌کند. آیا مطمئن هستید؟')" class="btn-link danger">حذف کامل پروژه</a>
-                                    </td>
-                                </tr>
-                                {{else}}
-                                <tr class="empty-row"><td colspan="3">هیچ پروژه تعریفی یافت نشد.</td></tr>
-                                {{end}}
+                                <tr><td class="tabular text-faint">1</td><td class="cell-strong">توسعه پلتفرم هوش مصنوعی</td><td class="cell-actions" style="text-align:center;"><a href="/admin/delete-project?id=1&tab=projects" onclick="return confirm('هشدار جدی: حذف پروژه تمامی ریز گزارش کارکردها را پاک میکند. تایید؟')" class="btn-link danger">حذف کامل پروژه</a></td></tr>
+                                <tr><td class="tabular text-faint">2</td><td class="cell-strong">توسعه هسته Go</td><td class="cell-actions" style="text-align:center;"><a href="/admin/delete-project?id=2&tab=projects" onclick="return confirm('هشدار جدی: حذف پروژه تمامی ریز گزارش کارکردها را پاک میکند. تایید؟')" class="btn-link danger">حذف کامل پروژه</a></td></tr>
+                                <tr><td class="tabular text-faint">3</td><td class="cell-strong">طراحی دیتابیس داکر</td><td class="cell-actions" style="text-align:center;"><a href="/admin/delete-project?id=3&tab=projects" onclick="return confirm('هشدار جدی: حذف پروژه تمامی ریز گزارش کارکردها را پاک میکند. تایید؟')" class="btn-link danger">حذف کامل پروژه</a></td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -521,6 +651,7 @@
         </div>
         {{end}}
 
+        <!-- تب پنجم: گزارش ماتریسی و پایش ماهانه پروژه‌ها -->
         {{if eq .CurrentTab "project_report"}}
         <div class="stack">
             <div class="card card__pad">
@@ -539,9 +670,9 @@
                         <label>فیلتر پروژهٔ هدف</label>
                         <select name="filter_project">
                             <option value="">همهٔ پروژه‌های فعال</option>
-                            {{range .Projects}}
-                            <option value="{{.ID}}" {{if eq $.SelectedProjectFilter (printf "%d" .ID)}}selected{{end}}>{{.Name}}</option>
-                            {{end}}
+                            <option value="1" {{if eq .SelectedProjectFilter "1"}}selected{{end}}>توسعه پلتفرم هوش مصنوعی</option>
+                            <option value="2" {{if eq .SelectedProjectFilter "2"}}selected{{end}}>توسعه هسته Go</option>
+                            <option value="3" {{if eq .SelectedProjectFilter "3"}}selected{{end}}>طراحی دیتابیس داکر</option>
                         </select>
                     </div>
                     <div class="field">
@@ -632,7 +763,6 @@
 
 <script src="/static/js/jalali-datepicker.min.js"></script>
 <script>
-    // فعال‌سازی تقویم در یک بلاک امن به محض لود کامل ساختار صفحه
     document.addEventListener("DOMContentLoaded", function() {
         jalaliDatepicker.start({
             showTodayBtn: true,

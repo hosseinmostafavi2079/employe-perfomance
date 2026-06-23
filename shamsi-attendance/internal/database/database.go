@@ -46,7 +46,7 @@ func CreateTables() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// ۱. ایجاد جداول در صورت عدم وجود
+	// ۱. ایجاد جداول پایه و جداول جدید حقوق و دستمزد در صورت عدم وجود
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS employees (
 			id SERIAL PRIMARY KEY,
@@ -79,6 +79,43 @@ func CreateTables() {
 			hours_spent NUMERIC(4,2) NOT NULL,
 			description TEXT,
 			shamsi_date VARCHAR(10) NOT NULL
+		);`,
+
+		// ⭐️ جدول جدید: پروفایل حقوقی، عائله‌مندی و مانده مرخصی پرسنل (مادولار)
+		`CREATE TABLE IF NOT EXISTS employee_profiles (
+			id SERIAL PRIMARY KEY,
+			employee_code VARCHAR(50) UNIQUE NOT NULL REFERENCES employees(employee_code) ON DELETE CASCADE,
+			contract_type VARCHAR(50) NOT NULL DEFAULT 'REGULAR', -- REGULAR یا HOURLY
+			is_married BOOLEAN DEFAULT FALSE,
+			child_count INT DEFAULT 0,
+			eligible_for_seniority BOOLEAN DEFAULT FALSE,
+			custom_overtime_rate BIGINT DEFAULT 0,
+			hourly_rate BIGINT DEFAULT 0,
+			remaining_leave_hours NUMERIC(6,2) DEFAULT 0.0,
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		);`,
+
+		// ⭐️ جدول جدید: آرشیو فیش‌های حقوقی صادر شده توسط مدیریت ارشد
+		`CREATE TABLE IF NOT EXISTS payroll_slips (
+			id SERIAL PRIMARY KEY,
+			employee_code VARCHAR(50) NOT NULL REFERENCES employees(employee_code) ON DELETE CASCADE,
+			year INT NOT NULL,
+			month INT NOT NULL,
+			expected_work_hours NUMERIC(6,2) NOT NULL,
+			actual_work_hours NUMERIC(6,2) NOT NULL,
+			base_salary BIGINT NOT NULL,
+			bon_allowance BIGINT NOT NULL,
+			housing_allowance BIGINT NOT NULL,
+			marital_allowance BIGINT NOT NULL,
+			child_allowance BIGINT NOT NULL,
+			seniority_allowance BIGINT NOT NULL,
+			overtime_income BIGINT NOT NULL,
+			gross_earnings BIGINT NOT NULL,
+			insurance_deduction BIGINT NOT NULL,
+			leave_deficit_hours NUMERIC(6,2) NOT NULL,
+			total_deductions BIGINT NOT NULL,
+			net_payout BIGINT NOT NULL,
+			created_at TIMESTAMPTZ DEFAULT NOW()
 		);`,
 	}
 
