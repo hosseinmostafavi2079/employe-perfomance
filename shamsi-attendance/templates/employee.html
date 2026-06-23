@@ -187,7 +187,7 @@
                         </span>
                         <a href="/?tab=attendance" style="font-size: 12px; color: var(--text-faint); text-decoration: none;">✕ لغو</a>
                     </div>
-                    <form action="/edit-attendance" method="POST" class="form">
+                    <form action="/manual-attendance" method="POST" class="form">
                         <input type="hidden" name="tab" value="attendance">
                         <input type="hidden" name="attendance_id" value="{{.EditAttendanceLog.ID}}">
                         <input type="hidden" name="target_employee" value="{{.CurrentUser}}">
@@ -409,7 +409,6 @@
 
 <script src="/static/js/jalali-datepicker.min.js"></script>
 <script>
-    // فعال‌سازی تقویم در یک بلاک امن به محض لود کامل ساختار صفحه
     document.addEventListener("DOMContentLoaded", function() {
         jalaliDatepicker.start({
             showTodayBtn: true,

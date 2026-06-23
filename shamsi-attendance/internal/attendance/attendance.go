@@ -18,13 +18,13 @@ func GetCurrentShamsiDate() string {
 	return fmt.Sprintf("%d/%02d/%02d", pt.Year(), int(pt.Month()), pt.Day())
 }
 
-// ParseShamsiToTime تبدیل تاریخ شمسی و ساعت به زمان استاندارد سیستم
+// ParseShamsiToTime تبدیل تاریخ شمسی و ساعت به زمان استاندارد سیستم با انعطاف بالا در برابر فرمت ثانیه‌دار
 func ParseShamsiToTime(shamsiDateStr string, timeStr string) (time.Time, error) {
 	dateParts := strings.Split(shamsiDateStr, "/")
 	timeParts := strings.Split(timeStr, ":")
 
-	if len(dateParts) != 3 || len(timeParts) != 2 {
-		return time.Time{}, fmt.Errorf("فرمت تاریخ یا ساعت اشتباه است")
+	if len(dateParts) != 3 || len(timeParts) < 2 {
+		return time.Time{}, fmt.Errorf("فرمت تاریخ یا ساعت اشتباه است. الگو باید شامل ساعت و دقیقه باشد")
 	}
 
 	year, _ := strconv.Atoi(dateParts[0])
@@ -43,7 +43,6 @@ func CheckIn(employeeCode string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// ترفند معماری: بررسی اینکه آیا این نیرو از قبل تردد ورود باز بدون خروج دارد یا خیر
 	var exists bool
 	checkQuery := `SELECT EXISTS(SELECT 1 FROM attendance WHERE employee_code = $1 AND check_out IS NULL);`
 	err := database.DB.QueryRow(ctx, checkQuery, employeeCode).Scan(&exists)
@@ -51,7 +50,6 @@ func CheckIn(employeeCode string) error {
 		return err
 	}
 
-	// اگر ورود باز یافت شد، سیستم با قاطعیت جلوی خراب شدن داده‌ها را می‌گیرد
 	if exists {
 		return fmt.Errorf("شما یک ورود باز ثبت‌شده دارید! ابتدا باید خروج زنده خود را ثبت کنید")
 	}
@@ -64,7 +62,7 @@ func CheckIn(employeeCode string) error {
 	return err
 }
 
-// CheckOut ثبت خروج زنده و خودکار (دکمه سریع)
+// CheckOut ثبت خروج زنده و خودکار
 func CheckOut(employeeCode string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -120,7 +118,6 @@ func UpdateAttendance(id int, employeeCode string, shamsiDate string, checkInTim
 	var query string
 	var args []interface{}
 
-	// اگر کاربر ساعت خروج را هم مشخص کرده بود، آن را پارس و ذخیره کن؛ در غیر این صورت خروج باز بماند
 	if checkOutTime != "" && checkOutTime != "--" && checkOutTime != "00:00:00" {
 		tOut, err := ParseShamsiToTime(shamsiDate, checkOutTime)
 		if err != nil {
