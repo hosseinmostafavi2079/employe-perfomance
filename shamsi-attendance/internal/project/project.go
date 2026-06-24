@@ -81,7 +81,8 @@ func UpdateWorkLog(logID int, projectID int, hours float64, description string, 
 		WHERE id = $5;
 	`
 
-	_, err := database.DB.Exec(ctx, query, projectID, hours, description, logID)
+	// مشکل اینجا بود: shamsiDate جا افتاده بود که در خط زیر به عنوان پارامتر چهارم اضافه شد
+	_, err := database.DB.Exec(ctx, query, projectID, hours, description, shamsiDate, logID)
 	if err != nil {
 		return fmt.Errorf("خطا در ویرایش کارکرد: %v", err)
 	}

@@ -2,18 +2,20 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
+	"math"
 	"net/http"
-	"net/url" 
-	"strings" 
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"shamsi_attendance/internal/attendance"
 	"shamsi_attendance/internal/database"
-	"shamsi_attendance/internal/payroll" 
+	"shamsi_attendance/internal/payroll"
 	"shamsi_attendance/internal/project"
 
 	"github.com/xuri/excelize/v2"
@@ -27,17 +29,59 @@ const (
 	MonthlyHousing1405     int64   = 30000000
 	MonthlyMarital1405     int64   = 5000000
 	MonthlyChildPerOne1405 int64   = 16625550
-	MonthlyLeaveAccrual    float64 = 20.0 
+	MonthlyLeaveAccrual    float64 = 20.0
 )
 
+// --- توابع کمکی برای تبدیل زمان دقیق بسیار ایمن ---
+func ParseDuration(input string) float64 {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return 0
+	}
+	if strings.Contains(input, ":") {
+		parts := strings.Split(input, ":")
+		if len(parts) == 2 {
+			h, _ := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
+			m, _ := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+			return h + (m / 60.0)
+		}
+	}
+	f, _ := strconv.ParseFloat(input, 64)
+	return f
+}
+
+func FormatDuration(hours float64) string {
+	if math.IsNaN(hours) || math.IsInf(hours, 0) {
+		return "00:00"
+	}
+	sign := ""
+	if hours < 0 {
+		sign = "-"
+		hours = -hours
+	}
+	h := int(hours)
+	m := int(math.Round((hours - float64(h)) * 60))
+	if m >= 60 {
+		h += 1
+		m -= 60
+	}
+	if m < 0 {
+		m = 0
+	}
+	return fmt.Sprintf("%s%02d:%02d", sign, h, m)
+}
+
+// ----------------------------------------
+
 type WorkLogView struct {
-	ID           int
-	EmployeeCode string
-	ProjectID    int
-	ProjectName  string
-	HoursSpent   float64
-	Description  string
-	ShamsiDate   string
+	ID             int
+	EmployeeCode   string
+	ProjectID      int
+	ProjectName    string
+	HoursSpent     float64
+	FormattedHours string
+	Description    string
+	ShamsiDate     string
 }
 
 type AttendanceView struct {
@@ -76,32 +120,51 @@ type FinancialProfileView struct {
 	ShebaNumber          string
 }
 
+type LiveStatusView struct {
+	EmployeeCode string
+	FullName     string
+	IsPresent    bool
+	CheckInTime  string
+}
+
 type PageData struct {
 	IsLoggedIn              bool
-	CurrentDate           string
-	TotalHours            float64
-	Message               string
-	CurrentUser           string
-	CurrentRole           string
-	SelectedFilter        string
-	SelectedProjectFilter string
-	SelectedMonthFilter   string
-	CurrentTab            string
-	WorkLogs              []WorkLogView
-	AttendanceLogs        []AttendanceView
-	Employees             []EmployeeView 
-	Projects              []ProjectView  
-	EditLog               *WorkLogView
-	EditAttendanceLog     *AttendanceView 
-	TotalAttendanceMonthStr string          
-	TotalAttendanceDayStr   string          
+	CurrentDate             string
+	TotalHours              float64
+	TotalHoursFormatted     string
+	Message                 string
+	CurrentUser             string
+	CurrentFullName         string
+	CurrentRole             string
+	SelectedFilter          string
+	SelectedProjectFilter   string
+	SelectedMonthFilter     string
+	CurrentTab              string
+	WorkLogs                []WorkLogView
+	AttendanceLogs          []AttendanceView
+	Employees               []EmployeeView
+	Projects                []ProjectView
+	EditLog                 *WorkLogView
+	EditAttendanceLog       *AttendanceView
+	TotalAttendanceMonthStr string
+	TotalAttendanceDayStr   string
 	SelectedProfile         *FinancialProfileView
+	
+	// دیتای اختصاصی داشبورد آنالیز
+	LiveStatuses      []LiveStatusView
+	PieLabelsJSON     template.JS
+	PieDataJSON       template.JS
+	BarLabelsJSON     template.JS
+	BarDataJSON       template.JS
+	RecentTasks       []WorkLogView
+	ActiveProjects    []string
+	SelectedMonthsMap map[string]bool
 }
 
 func setFlashMessage(w http.ResponseWriter, message string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "flash_message",
-		Value:    url.QueryEscape(message), 
+		Value:    url.QueryEscape(message),
 		Path:     "/",
 		HttpOnly: true,
 		Expires:  time.Now().Add(10 * time.Second),
@@ -161,10 +224,10 @@ func main() {
 	http.HandleFunc("/admin/edit-project", handleEditProject)
 	http.HandleFunc("/admin/delete-project", handleDeleteProject)
 
-	fmt.Println("🚀 وب‌سرور امن تفکیک‌شده با موفقیت روشن شد!")
-	fmt.Println("🌐 آدرس ورود به سامانه: http://localhost:8080")
+	fmt.Println("🚀 وب‌سرور امن تفکیک‌شده با موفقیت روی پورت 8085 روشن شد!")
+	fmt.Println("🌐 آدرس ورود به سامانه: http://localhost:8085")
 	fmt.Println("==================================================")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8085", nil))
 }
 
 func getAuthenticatedUser(r *http.Request) (string, string) {
@@ -176,7 +239,7 @@ func getAuthenticatedUser(r *http.Request) (string, string) {
 	if err != nil {
 		username = cookie.Value
 	}
-	username = strings.ToUpper(strings.TrimSpace(username)) 
+	username = strings.ToUpper(strings.TrimSpace(username))
 
 	ctx := context.Background()
 	var role string
@@ -192,8 +255,6 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	username, role := getAuthenticatedUser(r)
 	flashMsg := getFlashMessage(w, r)
 
-	log.Printf("[LOG-SYSTEM] Request received. User: %s | Role: %s | Tab: %s", username, role, r.URL.Query().Get("tab"))
-
 	if username == "" {
 		tmpl, err := template.ParseFiles("templates/login.html")
 		if err != nil {
@@ -204,24 +265,192 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	editIDParam := r.URL.Query().Get("edit_id")
-	editAttIDParam := r.URL.Query().Get("edit_attendance_id")
-	editFinancialCode := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("edit_financial_code")))
-	filterEmployee := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("filter_employee")))
-	filterProject := r.URL.Query().Get("filter_project")
-	filterMonth := r.URL.Query().Get("filter_month")
-	tabParam := r.URL.Query().Get("tab")
+	var currentFullName string
+	_ = database.DB.QueryRow(ctx, "SELECT full_name FROM employees WHERE employee_code = $1;", username).Scan(&currentFullName)
+	if currentFullName == "" {
+		currentFullName = username
+	}
+
+	r.ParseForm()
+	editIDParam := r.FormValue("edit_id")
+	editAttIDParam := r.FormValue("edit_attendance_id")
+	editFinancialCode := strings.ToUpper(strings.TrimSpace(r.FormValue("edit_financial_code")))
+	filterEmployee := strings.ToUpper(strings.TrimSpace(r.FormValue("filter_employee")))
+	filterProject := r.FormValue("filter_project")
+	filterMonth := r.FormValue("filter_month") // Single select fallback
+	filterMonths := r.Form["filter_months"]    // Multi-select array
+	tabParam := r.FormValue("tab")
+
+	// Fallback برای زمانی که کاربر به جای انتخاب چندتایی، فقط یک ماه را زده باشد
+	if len(filterMonths) == 0 && filterMonth != "" {
+		filterMonths = append(filterMonths, filterMonth)
+	}
 
 	currentTab := "attendance"
-	if tabParam == "worklog" {
+	if tabParam == "" {
+		if role == "ADMIN" {
+			currentTab = "dashboard"
+		} else {
+			currentTab = "attendance"
+		}
+	} else if tabParam == "dashboard" && role == "ADMIN" {
+		currentTab = "dashboard"
+	} else if tabParam == "worklog" {
 		currentTab = "worklog"
 	} else if tabParam == "management" && role == "ADMIN" {
 		currentTab = "management"
 	} else if tabParam == "projects" && role == "ADMIN" {
-		currentTab = "projects" 
+		currentTab = "projects"
 	} else if tabParam == "project_report" && role == "ADMIN" {
 		currentTab = "project_report"
+	} else {
+		currentTab = tabParam
 	}
+
+	// --- استخراج داده‌های هوشمند داشبورد مدیریت ---
+	var liveStatuses []LiveStatusView
+	pieLabels := []string{}
+	pieData := []float64{}
+	barLabels := []string{}
+	barData := []float64{}
+	var recentTasks []WorkLogView
+	activeProjects := []string{}
+	selectedMonthsMap := make(map[string]bool)
+
+	for _, m := range filterMonths {
+		selectedMonthsMap[m] = true
+	}
+
+	todayStrDate := attendance.GetCurrentShamsiDate()
+	yearPrefix := ""
+	if len(todayStrDate) >= 4 {
+		yearPrefix = todayStrDate[0:4]
+	}
+
+	if role == "ADMIN" && currentTab == "dashboard" {
+		// ۱. وضعیت زنده (شامل تمامی مدیرها و پرسنل)
+		lsRows, _ := database.DB.Query(ctx, `
+			SELECT e.employee_code, e.full_name,
+				   (SELECT check_in FROM attendance a WHERE a.employee_code = e.employee_code AND a.shamsi_date = $1 ORDER BY id DESC LIMIT 1),
+				   (SELECT check_out FROM attendance a WHERE a.employee_code = e.employee_code AND a.shamsi_date = $1 ORDER BY id DESC LIMIT 1)
+			FROM employees e
+			ORDER BY e.role ASC, e.full_name ASC
+		`, todayStrDate)
+		if lsRows != nil {
+			defer lsRows.Close()
+			for lsRows.Next() {
+				var lsv LiveStatusView
+				var tIn, tOut *time.Time
+				lsRows.Scan(&lsv.EmployeeCode, &lsv.FullName, &tIn, &tOut)
+				if tIn != nil && tOut == nil {
+					lsv.IsPresent = true
+					lsv.CheckInTime = tIn.In(time.Local).Format("15:04")
+				} else {
+					lsv.IsPresent = false
+					lsv.CheckInTime = "--:--"
+				}
+				liveStatuses = append(liveStatuses, lsv)
+			}
+		}
+
+		// ساخت کوئری‌های داینامیک بر اساس ماه و شخص
+		var args []interface{}
+		args = append(args, yearPrefix)
+		argCounter := 2
+		
+		empCondition := ""
+		if filterEmployee != "" {
+			empCondition = fmt.Sprintf("AND w.employee_code = $%d", argCounter)
+			args = append(args, filterEmployee)
+			argCounter++
+		}
+		
+		monthCondition := ""
+		if len(filterMonths) > 0 {
+			placeholders := []string{}
+			for _, m := range filterMonths {
+				placeholders = append(placeholders, fmt.Sprintf("$%d", argCounter))
+				args = append(args, m)
+				argCounter++
+			}
+			monthCondition = fmt.Sprintf("AND split_part(w.shamsi_date, '/', 2) IN (%s)", strings.Join(placeholders, ","))
+		}
+
+		// ۲. نمودار دایره‌ای (سهم پروژه‌ها از کارکرد)
+		pieQ := fmt.Sprintf(`
+			SELECT p.name, COALESCE(SUM(w.hours_spent), 0)
+			FROM work_logs w
+			JOIN projects p ON w.project_id = p.id
+			WHERE w.shamsi_date LIKE $1 || '%%' %s %s
+			GROUP BY p.name
+		`, empCondition, monthCondition)
+		
+		pRows, err := database.DB.Query(ctx, pieQ, args...)
+		if err == nil {
+			defer pRows.Close()
+			for pRows.Next() {
+				var pName string
+				var h float64
+				pRows.Scan(&pName, &h)
+				pieLabels = append(pieLabels, pName)
+				pieData = append(pieData, math.Round(h*100)/100)
+			}
+		}
+
+		// ۳. نمودار میله‌ای (مقایسه ماه‌ها)
+		barQ := fmt.Sprintf(`
+			SELECT split_part(w.shamsi_date, '/', 2) as month, COALESCE(SUM(w.hours_spent), 0)
+			FROM work_logs w
+			WHERE w.shamsi_date LIKE $1 || '%%' %s %s
+			GROUP BY month
+			ORDER BY month ASC
+		`, empCondition, monthCondition)
+		
+		bRows, err2 := database.DB.Query(ctx, barQ, args...)
+		if err2 == nil {
+			defer bRows.Close()
+			for bRows.Next() {
+				var m string
+				var h float64
+				bRows.Scan(&m, &h)
+				barLabels = append(barLabels, "ماه "+m)
+				barData = append(barData, math.Round(h*100)/100)
+			}
+		}
+
+		// ۴. خلاصه وضعیت فرد (فقط اگر یک شخص خاص انتخاب شده باشد)
+		if filterEmployee != "" {
+			taskQ := fmt.Sprintf(`
+				SELECT w.id, w.employee_code, w.project_id, p.name, COALESCE(w.hours_spent, 0), COALESCE(w.description, ''), w.shamsi_date 
+				FROM work_logs w JOIN projects p ON w.project_id = p.id 
+				WHERE w.shamsi_date LIKE $1 || '%%' %s %s
+				ORDER BY w.shamsi_date DESC, w.id DESC LIMIT 8
+			`, empCondition, monthCondition)
+			
+			tRows, err3 := database.DB.Query(ctx, taskQ, args...)
+			if err3 == nil {
+				defer tRows.Close()
+				projMap := make(map[string]bool)
+				for tRows.Next() {
+					var wl WorkLogView
+					tRows.Scan(&wl.ID, &wl.EmployeeCode, &wl.ProjectID, &wl.ProjectName, &wl.HoursSpent, &wl.Description, &wl.ShamsiDate)
+					wl.FormattedHours = FormatDuration(wl.HoursSpent)
+					recentTasks = append(recentTasks, wl)
+					
+					if !projMap[wl.ProjectName] {
+						projMap[wl.ProjectName] = true
+						activeProjects = append(activeProjects, wl.ProjectName)
+					}
+				}
+			}
+		}
+	}
+
+	plJSON, _ := json.Marshal(pieLabels)
+	pdJSON, _ := json.Marshal(pieData)
+	blJSON, _ := json.Marshal(barLabels)
+	bdJSON, _ := json.Marshal(barData)
+	// --------------------------------------------------
 
 	var selectedProfile *FinancialProfileView = nil
 	if editFinancialCode != "" && role == "ADMIN" {
@@ -250,9 +479,10 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	if editIDParam != "" {
 		eID, _ := strconv.Atoi(editIDParam)
 		var ev WorkLogView
-		err := database.DB.QueryRow(ctx, "SELECT id, employee_code, project_id, hours_spent, description, shamsi_date FROM work_logs WHERE id=$1;", eID).
+		err := database.DB.QueryRow(ctx, "SELECT id, employee_code, project_id, COALESCE(hours_spent, 0), COALESCE(description, ''), shamsi_date FROM work_logs WHERE id=$1;", eID).
 			Scan(&ev.ID, &ev.EmployeeCode, &ev.ProjectID, &ev.HoursSpent, &ev.Description, &ev.ShamsiDate)
 		if err == nil {
+			ev.FormattedHours = FormatDuration(ev.HoursSpent)
 			editLog = &ev
 			currentTab = "worklog"
 		}
@@ -279,35 +509,36 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var workLogs []WorkLogView
-	logQuery := `SELECT w.id, w.employee_code, w.project_id, p.name, w.hours_spent, w.description, w.shamsi_date 
+	logQuery := `SELECT w.id, w.employee_code, w.project_id, p.name, COALESCE(w.hours_spent, 0), COALESCE(w.description, ''), w.shamsi_date 
                  FROM work_logs w JOIN projects p ON w.project_id = p.id WHERE 1=1 `
-	var args []interface{}
+	var logArgs []interface{}
 	argIdx := 1
 
 	if role != "ADMIN" || targetFilterUser != "" {
 		logQuery += fmt.Sprintf("AND w.employee_code = $%d ", argIdx)
-		args = append(args, targetFilterUser)
+		logArgs = append(logArgs, targetFilterUser)
 		argIdx++
 	}
 	if filterProject != "" {
 		pID, _ := strconv.Atoi(filterProject)
 		logQuery += fmt.Sprintf("AND w.project_id = $%d ", argIdx)
-		args = append(args, pID)
+		logArgs = append(logArgs, pID)
 		argIdx++
 	}
 	if filterMonth != "" {
 		logQuery += fmt.Sprintf("AND split_part(w.shamsi_date, '/', 2) = $%d ", argIdx)
-		args = append(args, filterMonth)
+		logArgs = append(logArgs, filterMonth)
 		argIdx++
 	}
 	logQuery += "ORDER BY w.shamsi_date DESC, w.id DESC;"
 
-	rows, err := database.DB.Query(ctx, logQuery, args...)
+	rows, err := database.DB.Query(ctx, logQuery, logArgs...)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
 			var wl WorkLogView
 			if err := rows.Scan(&wl.ID, &wl.EmployeeCode, &wl.ProjectID, &wl.ProjectName, &wl.HoursSpent, &wl.Description, &wl.ShamsiDate); err == nil {
+				wl.FormattedHours = FormatDuration(wl.HoursSpent)
 				workLogs = append(workLogs, wl)
 			}
 		}
@@ -407,29 +638,41 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := PageData{
-		IsLoggedIn:            true,
-		CurrentDate:           attendance.GetCurrentShamsiDate(),
-		TotalHours:            totalHours,
-		Message:               flashMsg,
-		CurrentUser:           username,
-		CurrentRole:           role,
-		SelectedFilter:        filterEmployee,
-		SelectedProjectFilter: filterProject,
-		SelectedMonthFilter:   filterMonth,
-		CurrentTab:            currentTab,
-		WorkLogs:              workLogs,
-		AttendanceLogs:        attLogs,
-		Employees:             employees, 
-		Projects:              projects,  
-		EditLog:               editLog,
-		EditAttendanceLog:     editAttLog,
-		TotalAttendanceMonthStr: fmt.Sprintf("%.2f ساعت", totalHours),
+		IsLoggedIn:              true,
+		CurrentDate:             attendance.GetCurrentShamsiDate(),
+		TotalHours:              totalHours,
+		TotalHoursFormatted:     FormatDuration(totalHours),
+		Message:                 flashMsg,
+		CurrentUser:             username,
+		CurrentFullName:         currentFullName,
+		CurrentRole:             role,
+		SelectedFilter:          filterEmployee,
+		SelectedProjectFilter:   filterProject,
+		SelectedMonthFilter:     filterMonth,
+		CurrentTab:              currentTab,
+		WorkLogs:                workLogs,
+		AttendanceLogs:          attLogs,
+		Employees:               employees,
+		Projects:                projects,
+		EditLog:                 editLog,
+		EditAttendanceLog:       editAttLog,
+		TotalAttendanceMonthStr: FormatDuration(totalHours) + " ساعت",
 		TotalAttendanceDayStr:   todayStr,
-		SelectedProfile:       selectedProfile,
+		SelectedProfile:         selectedProfile,
+		LiveStatuses:            liveStatuses,
+		PieLabelsJSON:           template.JS(plJSON),
+		PieDataJSON:             template.JS(pdJSON),
+		BarLabelsJSON:           template.JS(blJSON),
+		BarDataJSON:             template.JS(bdJSON),
+		RecentTasks:             recentTasks,
+		ActiveProjects:          activeProjects,
+		SelectedMonthsMap:       selectedMonthsMap,
 	}
 
 	var targetTemplateFile string = "templates/employee.html"
-	if role == "ADMIN" { targetTemplateFile = "templates/admin.html" }
+	if role == "ADMIN" {
+		targetTemplateFile = "templates/admin.html"
+	}
 
 	tmpl, err := template.ParseFiles(targetTemplateFile)
 	if err != nil {
@@ -447,11 +690,11 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 
 		var dbUser, hashedPassword string
 		err := database.DB.QueryRow(ctx, "SELECT employee_code, password FROM employees WHERE employee_code = $1;", username).Scan(&dbUser, &hashedPassword)
-		
+
 		if err == nil && bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)) == nil {
 			http.SetCookie(w, &http.Cookie{
 				Name:     "session_user",
-				Value:    url.QueryEscape(username), 
+				Value:    url.QueryEscape(username),
 				Expires:  time.Now().Add(24 * time.Hour),
 				HttpOnly: true,
 				Path:     "/",
@@ -498,7 +741,7 @@ func handleLogWork(w http.ResponseWriter, r *http.Request) {
 	if tab == "" { tab = "worklog" }
 	if username != "" {
 		pID, _ := strconv.Atoi(r.FormValue("project_id"))
-		hours, _ := strconv.ParseFloat(r.FormValue("hours"), 64)
+		hours := ParseDuration(r.FormValue("hours"))
 		desc := r.FormValue("description")
 		sDate := r.FormValue("shamsi_date")
 
@@ -516,14 +759,22 @@ func handleManualAttendance(w http.ResponseWriter, r *http.Request) {
 		sDate := r.FormValue("shamsi_date")
 		tIn := r.FormValue("check_in_time")
 		tOut := r.FormValue("check_out_time")
+		attIDStr := r.FormValue("attendance_id")
 
 		target := username
 		if role == "ADMIN" && r.FormValue("target_employee") != "" {
 			target = strings.ToUpper(strings.TrimSpace(r.FormValue("target_employee")))
 		}
 
+		if attIDStr != "" {
+			attID, _ := strconv.Atoi(attIDStr)
+			_, _ = database.DB.Exec(context.Background(), "DELETE FROM attendance WHERE id = $1;", attID)
+		}
+
 		err := attendance.AddManualAttendance(target, sDate, tIn, tOut)
-		if err != nil { setFlashMessage(w, "خطا: " + err.Error()) } else { setFlashMessage(w, "تردد اصلاحی با موفقیت ثبت شد.") }
+		if err != nil { setFlashMessage(w, "خطا: "+err.Error()) } else {
+			if attIDStr != "" { setFlashMessage(w, "تردد با موفقیت ویرایش و جایگزین شد.") } else { setFlashMessage(w, "تردد اصلاحی با موفقیت ثبت شد.") }
+		}
 	}
 	http.Redirect(w, r, "/?tab="+tab, http.StatusSeeOther)
 }
@@ -535,7 +786,7 @@ func handleEditWorkLog(w http.ResponseWriter, r *http.Request) {
 	if username != "" {
 		logID, _ := strconv.Atoi(r.FormValue("log_id"))
 		pID, _ := strconv.Atoi(r.FormValue("project_id"))
-		hours, _ := strconv.ParseFloat(r.FormValue("hours"), 64)
+		hours := ParseDuration(r.FormValue("hours"))
 		desc := r.FormValue("description")
 		sDate := r.FormValue("shamsi_date")
 
@@ -590,11 +841,36 @@ func handleEditEmployee(w http.ResponseWriter, r *http.Request) {
 	_, role := getAuthenticatedUser(r)
 	if role != "ADMIN" { return }
 	if r.Method == http.MethodPost {
-		empCode := strings.ToUpper(strings.TrimSpace(r.FormValue("emp_code")))
+		ctx := context.Background()
+		origCode := strings.ToUpper(strings.TrimSpace(r.FormValue("original_emp_code")))
+		newCode := strings.ToUpper(strings.TrimSpace(r.FormValue("emp_code")))
+		if newCode == "" { newCode = origCode }
+
+		var existingFullName string
+		_ = database.DB.QueryRow(ctx, "SELECT full_name FROM employees WHERE employee_code = $1;", origCode).Scan(&existingFullName)
+
 		fullName := r.FormValue("full_name")
+		if fullName == "" { fullName = existingFullName }
 		uRole := r.FormValue("role")
-		_, err := database.DB.Exec(context.Background(), "UPDATE employees SET full_name = $1, role = $2 WHERE employee_code = $3;", fullName, uRole, empCode)
-		if err != nil { setFlashMessage(w, "خطا: "+err.Error()) } else { setFlashMessage(w, "مشخصات پرسنل بروزرسانی شد.") }
+		password := r.FormValue("password")
+
+		if newCode != origCode && origCode != "" {
+			_, errUpdate := database.DB.Exec(ctx, "UPDATE employees SET employee_code = $1 WHERE employee_code = $2;", newCode, origCode)
+			if errUpdate == nil {
+				database.DB.Exec(ctx, "UPDATE work_logs SET employee_code = $1 WHERE employee_code = $2;", newCode, origCode)
+				database.DB.Exec(ctx, "UPDATE attendance SET employee_code = $1 WHERE employee_code = $2;", newCode, origCode)
+				database.DB.Exec(ctx, "UPDATE employee_profiles SET employee_code = $1 WHERE employee_code = $2;", newCode, origCode)
+			}
+		}
+
+		if password != "" {
+			hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+			_, err := database.DB.Exec(ctx, "UPDATE employees SET full_name = $1, role = $2, password = $3 WHERE employee_code = $4;", fullName, uRole, string(hash), newCode)
+			if err != nil { setFlashMessage(w, "خطا: "+err.Error()) } else { setFlashMessage(w, "مشخصات و رمز عبور پرسنل بروزرسانی شد.") }
+		} else {
+			_, err := database.DB.Exec(ctx, "UPDATE employees SET full_name = $1, role = $2 WHERE employee_code = $3;", fullName, uRole, newCode)
+			if err != nil { setFlashMessage(w, "خطا: "+err.Error()) } else { setFlashMessage(w, "مشخصات پرسنل با موفقیت بروزرسانی شد.") }
+		}
 	}
 	http.Redirect(w, r, "/?tab=management", http.StatusSeeOther)
 }
@@ -614,15 +890,9 @@ func handleCreateProject(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		name := strings.TrimSpace(r.FormValue("project_name"))
 		if name == "" { name = strings.TrimSpace(r.FormValue("name")) }
-		
 		if name != "" {
 			_, err := database.DB.Exec(context.Background(), "INSERT INTO projects (name) VALUES ($1) ON CONFLICT DO NOTHING;", name)
-			if err != nil {
-				setFlashMessage(w, "خطا: "+err.Error())
-			} else {
-				setFlashMessage(w, "✅ پروژه جدید با موفقیت ایجاد شد.")
-				log.Printf("[LOG-SYSTEM] Project created in database: %s", name)
-			}
+			if err != nil { setFlashMessage(w, "خطا: "+err.Error()) } else { setFlashMessage(w, "✅ پروژه جدید با موفقیت ایجاد شد.") }
 		}
 	}
 	http.Redirect(w, r, "/?tab=projects", http.StatusSeeOther)
@@ -661,7 +931,6 @@ func handleSavePayrollProfile(w http.ResponseWriter, r *http.Request) {
 		overtimeRate, _ := strconv.ParseInt(r.FormValue("custom_overtime_rate"), 10, 64)
 		hourlyRate, _ := strconv.ParseInt(r.FormValue("hourly_rate"), 10, 64)
 		leaveHours, _ := strconv.ParseFloat(r.FormValue("remaining_leave_hours"), 64)
-
 		nationalCode := strings.TrimSpace(r.FormValue("national_code"))
 		phoneNumber := strings.TrimSpace(r.FormValue("phone_number"))
 		bankCard := strings.TrimSpace(r.FormValue("bank_card"))
@@ -669,28 +938,16 @@ func handleSavePayrollProfile(w http.ResponseWriter, r *http.Request) {
 
 		query := `INSERT INTO employee_profiles (
 					employee_code, contract_type, is_married, child_count, eligible_for_seniority, 
-					custom_overtime_rate, hourly_rate, remaining_leave_hours, 
-					national_code, phone_number, bank_card_number, sheba_number
+					custom_overtime_rate, hourly_rate, remaining_leave_hours, national_code, phone_number, bank_card_number, sheba_number
 				  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
 				  ON CONFLICT (employee_code) DO UPDATE SET 
-					contract_type=EXCLUDED.contract_type, 
-					is_married=EXCLUDED.is_married, 
-					child_count=EXCLUDED.child_count, 
-					eligible_for_seniority=EXCLUDED.eligible_for_seniority,
-					custom_overtime_rate=EXCLUDED.custom_overtime_rate,
-					hourly_rate=EXCLUDED.hourly_rate,
-					remaining_leave_hours=EXCLUDED.remaining_leave_hours,
-					national_code=EXCLUDED.national_code,
-					phone_number=EXCLUDED.phone_number,
-					bank_card_number=EXCLUDED.bank_card_number,
-					sheba_number=EXCLUDED.sheba_number;`
-		
+					contract_type=EXCLUDED.contract_type, is_married=EXCLUDED.is_married, child_count=EXCLUDED.child_count, 
+					eligible_for_seniority=EXCLUDED.eligible_for_seniority, custom_overtime_rate=EXCLUDED.custom_overtime_rate,
+					hourly_rate=EXCLUDED.hourly_rate, remaining_leave_hours=EXCLUDED.remaining_leave_hours,
+					national_code=EXCLUDED.national_code, phone_number=EXCLUDED.phone_number, bank_card_number=EXCLUDED.bank_card_number, sheba_number=EXCLUDED.sheba_number;`
+
 		_, err := database.DB.Exec(context.Background(), query, empCode, cType, isMarried, childCount, eligibleSeniority, overtimeRate, hourlyRate, leaveHours, nationalCode, phoneNumber, bankCard, sheba)
-		if err != nil {
-			setFlashMessage(w, "❌ خطا در ذخیره پروفایل مالی: " + err.Error())
-		} else {
-			setFlashMessage(w, "✅ پروفایل حقوقی و اطلاعات بانکی پرسنل با موفقیت ذخیره شد.")
-		}
+		if err != nil { setFlashMessage(w, "❌ خطا در ذخیره پروفایل مالی: "+err.Error()) } else { setFlashMessage(w, "✅ پروفایل حقوقی و اطلاعات بانکی پرسنل با موفقیت ذخیره شد.") }
 	}
 	http.Redirect(w, r, "/?tab=management", http.StatusSeeOther)
 }
@@ -702,9 +959,9 @@ func handleIssuePayroll(w http.ResponseWriter, r *http.Request) {
 		empCode := strings.ToUpper(strings.TrimSpace(r.FormValue("employee_code")))
 		year, _ := strconv.Atoi(r.FormValue("year"))
 		month, _ := strconv.Atoi(r.FormValue("month"))
-		actualHours, _ := strconv.ParseFloat(r.FormValue("actual_hours"), 64)
-		expectedHours, _ := strconv.ParseFloat(r.FormValue("expected_hours"), 64)
-		overtimeHours, _ := strconv.ParseFloat(r.FormValue("overtime_hours"), 64)
+		actualHours := ParseDuration(r.FormValue("actual_hours"))
+		expectedHours := ParseDuration(r.FormValue("expected_hours"))
+		overtimeHours := ParseDuration(r.FormValue("overtime_hours"))
 		slip, err := payroll.IssueMonthlyPayroll(context.Background(), empCode, year, month, actualHours, expectedHours, overtimeHours)
 		if err != nil { setFlashMessage(w, "❌ خطا: "+err.Error()) } else { setFlashMessage(w, fmt.Sprintf("فیش حقوقی صادر شد. خالص دریافتی: %d", slip.NetPayout)) }
 	}
@@ -721,7 +978,7 @@ func handleExportExcel(w http.ResponseWriter, r *http.Request) {
 	targetExcelUser := filterEmp
 	if role != "ADMIN" { targetExcelUser = username }
 
-	logQuery := `SELECT w.employee_code, w.shamsi_date, p.name, w.hours_spent, w.description FROM work_logs w JOIN projects p ON w.project_id = p.id WHERE 1=1 `
+	logQuery := `SELECT w.employee_code, w.shamsi_date, p.name, COALESCE(w.hours_spent, 0), COALESCE(w.description, '') FROM work_logs w JOIN projects p ON w.project_id = p.id WHERE 1=1 `
 	var args []interface{}
 	argIdx := 1
 	if role != "ADMIN" || targetExcelUser != "" {
@@ -761,7 +1018,7 @@ func handleExportExcel(w http.ResponseWriter, r *http.Request) {
 			f.SetCellValue(sheetName, fmt.Sprintf("A%d", rowIdx), emp)
 			f.SetCellValue(sheetName, fmt.Sprintf("B%d", rowIdx), sDate)
 			f.SetCellValue(sheetName, fmt.Sprintf("C%d", rowIdx), pName)
-			f.SetCellValue(sheetName, fmt.Sprintf("D%d", rowIdx), hours)
+			f.SetCellValue(sheetName, fmt.Sprintf("D%d", rowIdx), FormatDuration(hours))
 			f.SetCellValue(sheetName, fmt.Sprintf("E%d", rowIdx), desc)
 			rowIdx++
 		}

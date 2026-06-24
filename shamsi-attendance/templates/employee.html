@@ -29,11 +29,12 @@
                     <span class="clock-chip__time tabular" data-clock-time>--:--:--</span>
                     <span class="clock-chip__date tabular">{{.CurrentDate}}</span>
                 </div>
+                <!-- نمایش نام کامل به جای کد پرسنلی -->
                 <div class="user-chip">
-                    <span class="user-chip__avatar">{{.CurrentUser}}</span>
+                    <span class="user-chip__avatar">👤</span>
                     <span style="display:flex;flex-direction:column;line-height:1.3;">
-                        <span class="user-chip__name">{{.CurrentUser}}</span>
-                        <span class="user-chip__role">کارمند سازمان</span>
+                        <span class="user-chip__name">{{.CurrentFullName}}</span>
+                        <span class="user-chip__role">{{if eq .CurrentRole "INTERN"}}کارآموز سازمان{{else}}کارمند سازمان{{end}}</span>
                     </span>
                 </div>
                 <a href="/logout" class="btn-logout">
@@ -274,8 +275,8 @@
                                 <input type="text" name="shamsi_date" value="{{.EditLog.ShamsiDate}}" data-jdp required class="tabular">
                             </div>
                             <div class="field">
-                                <label>مدت زمان (ساعت)</label>
-                                <input type="number" step="0.25" name="hours" value="{{.EditLog.HoursSpent}}" required class="tabular">
+                                <label>مدت زمان (ساعت:دقیقه)</label>
+                                <input type="text" name="hours" value="{{.EditLog.FormattedHours}}" required class="tabular" dir="ltr">
                             </div>
                         </div>
                         <div class="field">
@@ -310,8 +311,8 @@
                                 <input type="text" name="shamsi_date" value="{{.CurrentDate}}" data-jdp required class="tabular">
                             </div>
                             <div class="field">
-                                <label>مدت کارکرد (ساعت)</label>
-                                <input type="number" step="0.25" name="hours" placeholder="مثلاً 7.5" required class="tabular">
+                                <label>مدت کارکرد (ساعت:دقیقه)</label>
+                                <input type="text" name="hours" placeholder="مثلاً 7:30" required class="tabular" dir="ltr">
                             </div>
                         </div>
                         <div class="field">
@@ -362,7 +363,7 @@
                         </a>
                         <span class="stat-pill">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
-                            مجموع کارکرد: <b class="tabular">{{.TotalHours}}</b> ساعت
+                            مجموع کارکرد: <b class="tabular">{{.TotalHoursFormatted}}</b> ساعت
                         </span>
                     </div>
 
@@ -377,7 +378,7 @@
                                     <td data-label="تاریخ" class="cell-strong tabular">{{.ShamsiDate}}</td>
                                     <td data-label="پروژه" class="cell-strong">{{.ProjectName}}</td>
                                     <td data-label="شرح فعالیت" class="cell-desc">{{.Description}}</td>
-                                    <td data-label="مدت" class="cell-strong tabular">{{.HoursSpent}} ساعت</td>
+                                    <td data-label="مدت" class="cell-strong tabular">{{.FormattedHours}}</td>
                                     <td data-label="عملیات" class="cell-actions">
                                         <a href="/?edit_id={{.ID}}&tab=worklog" class="btn-link edit">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>

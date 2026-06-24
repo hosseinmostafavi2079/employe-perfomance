@@ -6,6 +6,52 @@
     <title>کنترل پنل مدیریت ارشد سازمان</title>
     <link rel="stylesheet" href="/static/css/jalali-datepicker.min.css">
     <link rel="stylesheet" href="/static/css/theme.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .mgmt-container-grid { display: grid; grid-template-columns: 1fr; gap: 24px; align-items: start; }
+        @media (min-width: 1100px) { .mgmt-container-grid { grid-template-columns: 1.4fr 1fr; } }
+        .swiss-card { background: rgba(23, 28, 38, 0.7); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 14px; backdrop-filter: blur(20px); padding: 24px; margin-bottom: 24px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .swiss-card:hover { border-color: rgba(255, 255, 255, 0.12); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2); }
+        .swiss-card__title-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+        .swiss-card__title { font-size: 16px; font-weight: 700; color: #ffffff; }
+        .swiss-card__icon { width: 20px; height: 20px; color: var(--amber); }
+        .financial-highlight { border: 1px solid rgba(240, 181, 69, 0.25) !important; background: linear-gradient(185deg, rgba(25, 30, 41, 0.85) 0%, rgba(18, 22, 30, 0.85) 100%) !important; }
+        .grid-fields-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px; }
+        .swiss-badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .swiss-badge--admin { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.2); }
+        .swiss-badge--employee { background: rgba(240, 181, 69, 0.12); color: var(--amber); border: 1px solid rgba(240, 181, 69, 0.2); }
+        .action-row-btn { display: flex; justify-content: flex-end; margin-top: 20px; }
+        .payslip-receipt-box { display: none; background: #ffffff; color: #1a1f2b; border-radius: 16px; padding: 32px; margin-bottom: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); border: 1px solid #e2e8f0; }
+        .payslip-header-mesh { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 18px; margin-bottom: 20px; }
+        .payslip-title { font-size: 20px; font-weight: 800; color: #0f172a; }
+        .payslip-meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; background: #f8fafc; padding: 14px; border-radius: 8px; font-size: 13px; margin-bottom: 22px; border: 1px solid #e2e8f0; }
+        .payslip-columns-twin { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+        .payslip-table-mini { width: 100%; border-collapse: collapse; }
+        .payslip-table-mini th { background: #f1f5f9; color: #475569; text-align: right; padding: 8px 12px; font-size: 13px; font-weight: 700; border-radius: 4px; }
+        .payslip-table-mini td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+        .payslip-total-block { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 18px 24px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 700; }
+        .payslip-total-price { font-size: 22px; color: #38bdf8; font-weight: 800; }
+        .payslip-footer-signatures { display: flex; justify-content: space-between; margin-top: 35px; padding-top: 15px; font-size: 12px; color: #64748b; }
+        .payslip-seal-placeholder { border: 1px dashed #cbd5e1; padding: 15px 35px; border-radius: 6px; font-style: italic; }
+        
+        .live-status-card { display: flex; align-items: center; justify-content: space-between; padding: 16px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+        .live-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+        .live-dot.active { background-color: #10b981; box-shadow: 0 0 10px #10b981; animation: pulse 2s infinite; }
+        .live-dot.inactive { background-color: #64748b; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
+        @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+        .chart-container { background: rgba(23, 28, 38, 0.7); padding: 24px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.06); }
+        .dashboard-filter-form { display:flex; flex-wrap:wrap; gap:16px; background: rgba(255,255,255,0.02); padding: 16px; border-radius: 12px; margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.05); }
+
+        @media print {
+            body { background: white !important; color: black !important; }
+            .atmosphere, .shell > header, .shell > main > *:not(#professional-payslip-modal), .no-print, .alert { display: none !important; }
+            #professional-payslip-modal { display: block !important; position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; padding: 0 !important; border: none !important; }
+            .payslip-total-block { background: #f1f5f9 !important; color: #000000 !important; border: 2px solid #000000; }
+            .payslip-total-price { color: #000000 !important; }
+        }
+    </style>
 </head>
 <body>
 <div class="atmosphere"></div>
@@ -30,9 +76,9 @@
                     <span class="clock-chip__date tabular">{{.CurrentDate}}</span>
                 </div>
                 <div class="user-chip is-admin">
-                    <span class="user-chip__avatar">{{.CurrentUser}}</span>
+                    <span class="user-chip__avatar">👤</span>
                     <span style="display:flex;flex-direction:column;line-height:1.3;">
-                        <span class="user-chip__name">{{.CurrentUser}}</span>
+                        <span class="user-chip__name">{{.CurrentFullName}}</span>
                         <span class="user-chip__role">مدیر ارشد سازمان</span>
                     </span>
                 </div>
@@ -44,9 +90,13 @@
         </div>
         <div class="container">
             <nav class="nav-tabs">
+                <a href="/?tab=dashboard" class="nav-tab {{if eq .CurrentTab "dashboard"}}is-active{{end}}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                    داشبورد مانیتورینگ
+                </a>
                 <a href="/?tab=attendance" class="nav-tab {{if eq .CurrentTab "attendance"}}is-active{{end}}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
-                    حضور و غیاب
+                    تاریخچه حضور
                 </a>
                 <a href="/?tab=worklog" class="nav-tab {{if eq .CurrentTab "worklog"}}is-active{{end}}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1Z"/><rect x="5" y="6" width="14" height="15" rx="2"/><path d="M9 12h6M9 16h4"/></svg>
@@ -72,13 +122,186 @@
 
         {{if .Message}}
         <div class="alert" data-alert>
-            <div class="alert__msg">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
-                {{.Message}}
-            </div>
+            <div class="alert__msg">{{.Message}}</div>
             <a href="/?tab={{.CurrentTab}}" class="alert__close">✕ بستن پیام</a>
         </div>
         {{end}}
+
+        {{if eq .CurrentTab "dashboard"}}
+        <div class="stack">
+            
+            <div class="swiss-card" style="border-left: 4px solid #10b981; padding: 20px;">
+                <div class="swiss-card__title-bar" style="margin-bottom: 16px; padding-bottom: 8px;">
+                    <span class="swiss-card__title">وضعیت زنده افراد حاضر (مدیران و پرسنل)</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
+                    {{range .LiveStatuses}}
+                    <div class="live-status-card">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span class="live-dot {{if .IsPresent}}active{{else}}inactive{{end}}"></span>
+                            <div>
+                                <div style="font-weight: 700; color: #fff; font-size: 14px;">{{.FullName}}</div>
+                                <div style="font-size: 11px; color: #8a94a6;" class="tabular">{{.EmployeeCode}}</div>
+                            </div>
+                        </div>
+                        <div class="tabular" style="font-size: 13px; font-weight: bold; color: {{if .IsPresent}}#10b981{{else}}#64748b{{end}};">
+                            {{if .IsPresent}}ورود: {{.CheckInTime}}{{else}}عدم حضور{{end}}
+                        </div>
+                    </div>
+                    {{else}}
+                        <div style="color: #8a94a6; font-size: 13px;">هیچ نیرویی در سیستم ثبت نشده است.</div>
+                    {{end}}
+                </div>
+            </div>
+
+            <form action="/" method="GET" class="dashboard-filter-form">
+                <input type="hidden" name="tab" value="dashboard">
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="display:block; margin-bottom: 8px; font-size: 13px; color: #8a94a6;">انتخاب نیرو (برای آنالیز اختصاصی):</label>
+                    <select name="filter_employee" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 6px;">
+                        <option value="">میانگین کل سازمان (بدون شخص خاص)</option>
+                        {{range .Employees}}
+                        <option value="{{.EmployeeCode}}" {{if eq $.SelectedFilter .EmployeeCode}}selected{{end}}>{{.FullName}} ({{.EmployeeCode}})</option>
+                        {{end}}
+                    </select>
+                </div>
+                <div style="flex: 2; min-width: 300px;">
+                    <label style="display:block; margin-bottom: 8px; font-size: 13px; color: #8a94a6;">انتخاب ماه‌های هدف (نگه‌داشتن Ctrl برای چند انتخاب):</label>
+                    <select name="filter_months" multiple style="width: 100%; height: 80px; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 6px;">
+                        <option value="01" {{if index $.SelectedMonthsMap "01"}}selected{{end}}>فروردین</option>
+                        <option value="02" {{if index $.SelectedMonthsMap "02"}}selected{{end}}>اردیبهشت</option>
+                        <option value="03" {{if index $.SelectedMonthsMap "03"}}selected{{end}}>خرداد</option>
+                        <option value="04" {{if index $.SelectedMonthsMap "04"}}selected{{end}}>تیر</option>
+                        <option value="05" {{if index $.SelectedMonthsMap "05"}}selected{{end}}>مرداد</option>
+                        <option value="06" {{if index $.SelectedMonthsMap "06"}}selected{{end}}>شهریور</option>
+                        <option value="07" {{if index $.SelectedMonthsMap "07"}}selected{{end}}>مهر</option>
+                        <option value="08" {{if index $.SelectedMonthsMap "08"}}selected{{end}}>آبان</option>
+                        <option value="09" {{if index $.SelectedMonthsMap "09"}}selected{{end}}>آذر</option>
+                        <option value="10" {{if index $.SelectedMonthsMap "10"}}selected{{end}}>دی</option>
+                        <option value="11" {{if index $.SelectedMonthsMap "11"}}selected{{end}}>بهمن</option>
+                        <option value="12" {{if index $.SelectedMonthsMap "12"}}selected{{end}}>اسفند</option>
+                    </select>
+                </div>
+                <div style="display:flex; align-items: flex-end;">
+                    <button type="submit" class="btn btn-amber" style="height: 42px; padding: 0 24px;">📊 تحلیل عملکرد</button>
+                </div>
+            </form>
+
+            <div class="charts-grid" style="margin-top: 0;">
+                <div class="chart-container">
+                    <h3 style="font-size: 15px; margin-bottom: 20px; color: #fff;">آنالیز پروژه‌ها (نمودار دایره‌ای کارکرد)</h3>
+                    <div style="position: relative; height: 300px; display: flex; justify-content: center;">
+                        <canvas id="pieChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3 style="font-size: 15px; margin-bottom: 20px; color: #fff;">مقایسه زمانی (نمودار میله‌ای ماه‌ها)</h3>
+                    <div style="position: relative; height: 300px;">
+                        <canvas id="barChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            {{if .SelectedFilter}}
+            <div class="swiss-card" style="margin-top: 24px;">
+                <div class="swiss-card__title-bar" style="margin-bottom: 16px;">
+                    <span class="swiss-card__title">خلاصه وضعیت و اقدامات شخص انتخاب‌شده</span>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <span style="color:#8a94a6; font-size: 13px; margin-left: 8px;">پروژه‌های درگیر شخص:</span>
+                    {{range .ActiveProjects}}
+                        <span class="swiss-badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; margin-left: 4px;">{{.}}</span>
+                    {{else}}
+                        <span style="color:#64748b; font-size: 12px;">پروژه‌ای یافت نشد</span>
+                    {{end}}
+                </div>
+
+                <h4 style="font-size: 14px; margin-bottom: 12px; color: #fff;">آخرین اقدامات ثبت‌شده (شرح وظایف)</h4>
+                <div class="table-wrap">
+                    <table class="payslip-table-mini" style="background: transparent;">
+                        <thead>
+                            <tr>
+                                <th style="background: rgba(255,255,255,0.05); color:#fff; text-align:right;">تاریخ</th>
+                                <th style="background: rgba(255,255,255,0.05); color:#fff; text-align:right;">پروژه مرتبط</th>
+                                <th style="background: rgba(255,255,255,0.05); color:#fff; text-align:right;">زمان صرف شده</th>
+                                <th style="background: rgba(255,255,255,0.05); color:#fff; text-align:right;">شرح فرآیند</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .RecentTasks}}
+                            <tr>
+                                <td style="color:#cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.05);" class="tabular">{{.ShamsiDate}}</td>
+                                <td style="color:#818cf8; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.05);">{{.ProjectName}}</td>
+                                <td style="color:#10b981; border-bottom: 1px solid rgba(255,255,255,0.05);" class="tabular">{{.FormattedHours}} ساعت</td>
+                                <td style="color:#cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.05);">{{.Description}}</td>
+                            </tr>
+                            {{else}}
+                            <tr><td colspan="4" style="text-align: center; color: #64748b;">هیچ عملکردی برای این شخص در بازه مورد نظر ثبت نشده است.</td></tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {{end}}
+
+        </div>
+        {{end}}
+
+        <div class="payslip-receipt-box" id="professional-payslip-modal">
+            <div class="payslip-header-mesh">
+                <div>
+                    <div class="payslip-title">فیش رسمی حقوق و دستمزد پرسنل</div>
+                    <span style="font-size: 11px; color:#64748b;">سامانه مدیریت منابع انسانی و کارکرد شمسی - مصوب سال ۱۴۰۵</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="btn-toggle-payslip-type" class="btn btn-soft no-print" style="width: auto; padding: 6px 12px; font-size: 12px; background: #e2e8f0; color: #475569; font-weight: bold;">
+                        🔄 تغییر قالب (رسمی / ساعتی)
+                    </button>
+                    <button onclick="window.print()" class="btn btn-soft no-print" style="width: auto; padding: 6px 16px; background: #f1f5f9; color: #0f172a; font-weight: bold;">
+                        🖨️ چاپ فیش
+                    </button>
+                </div>
+            </div>
+            <div class="payslip-meta-grid">
+                <div class="payslip-meta-item">نام کارمند: <b id="payslip-emp-name">--</b></div>
+                <div class="payslip-meta-item">دوره مالی: <b id="payslip-month">جاری</b> ۱۴۰۵</div>
+                <div class="payslip-meta-item">وضعیت پرداخت: <span style="color:#10b981; font-weight: bold;">✓ تایید نهایی</span></div>
+            </div>
+            <div class="payslip-columns-twin">
+                <div>
+                    <table class="payslip-table-mini">
+                        <thead><tr><th colspan="2">شرح حقوق، مزایا و تجلیل‌ها</th></tr></thead>
+                        <tbody>
+                            <tr id="row-base-salary"><td id="lbl-base-salary">حقوق پایه و کارکرد ماهانه دوره</td><td style="text-align: left;" class="tabular" id="val-base-salary">مبنای قانون کار</td></tr>
+                            <tr class="regular-only"><td>بن کارگری و اقلام مصرفی</td><td style="text-align: left;" class="tabular">۱۴,۰۰۰,۰۰۰ ریال</td></tr>
+                            <tr class="regular-only"><td>حق مسکن و کمک هزینه رفاهی</td><td style="text-align: left;" class="tabular">۹,۰۰,۰۰۰ ریال</td></tr>
+                            <tr class="regular-only"><td>حق اولاد و عائله‌مندی مشمولین</td><td style="text-align: left;" class="tabular">طبق ضوابط ساختار</td></tr>
+                            <tr><td>پاداش اضافه‌کاری و بهره‌وری ویژه</td><td style="text-align: left;" class="tabular">محاسبه زنده سیستم</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div>
+                    <table class="payslip-table-mini">
+                        <thead><tr><th colspan="2">کسورات قانونی و انضباطی</th></tr></thead>
+                        <tbody>
+                            <tr><td>حق بیمه تامین اجتماعی (سهم کارگر ۷٪)</td><td style="text-align: left; color: #ef4444;" class="tabular">کسر سیستمی</td></tr>
+                            <tr><td>مالیات بر درآمد حقوق ماهانه</td><td style="text-align: left; color: #ef4444;" class="tabular">معاف/مشمول قانونی</td></tr>
+                            <tr class="regular-only"><td>کسری تاخیر، تعجیل یا غیبت دوره</td><td style="text-align: left; color: #ef4444;" class="tabular">محاسبه بر مبنای مرخصی</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="payslip-total-block">
+                <span>خالص دریافتی نهایی کارمند (شامل تمام مزایا و کسورات):</span>
+                <span class="payslip-total-price tabular" id="payslip-net-salary">0 ریال</span>
+            </div>
+            <div class="payslip-footer-signatures">
+                <div>امضا و تایید دریافت کننده (کارمند)</div>
+                <div class="payslip-seal-placeholder">مهر و امضای امور مالی واحد پرسنلی</div>
+            </div>
+        </div>
 
         {{if eq .CurrentTab "attendance"}}
         <div class="layout-2 mobile-actions-first">
@@ -91,7 +314,7 @@
                         </div>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-left: auto; margin-right: 15px;">
                             <span style="background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 6px; font-size: 11px; border: 1px solid rgba(255,255,255,0.1);">
-                                حضور کل ماه: <b style="color: var(--amber);" class="tabular">{{.TotalHours}}</b> ساعت
+                                حضور کل ماه: <b style="color: var(--amber);" class="tabular">{{.TotalHoursFormatted}}</b> ساعت
                             </span>
                         </div>
                         <form action="/" method="GET" class="filter-form">
@@ -141,8 +364,16 @@
                                     <td data-label="مدت حضور">
                                         {{if .CheckOut}}<span class="cell-strong tabular">{{.Duration}}</span>{{else}}<span class="text-faint">{{.Duration}}</span>{{end}}
                                     </td>
-                                    <td data-label="عملیات" class="cell-actions">
-                                        <a href="/delete-attendance?id={{.ID}}&tab=attendance" onclick="return confirm('آیا از حذف این تردد مطمئن هستید؟')" class="btn-link danger">حذف رکورد</a>
+                                    <td data-label="عملیات" class="cell-actions" style="text-align:center;">
+                                        <a href="/?edit_attendance_id={{.ID}}&tab=attendance" class="btn-link edit" style="color: #818cf8;">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:middle;margin-left:4px;"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                            ویرایش
+                                        </a>
+                                        <span class="cell-sep" style="margin: 0 8px; border-right: 1px solid rgba(255,255,255,0.1);"></span>
+                                        <a href="/delete-attendance?id={{.ID}}&tab=attendance" onclick="return confirm('آیا از حذف این تردد مطمئن هستید؟')" class="btn-link danger">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:middle;margin-left:4px;"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>
+                                            حذف
+                                        </a>
                                     </td>
                                 </tr>
                                 {{else}}
@@ -171,6 +402,40 @@
                     </div>
                 </div>
 
+                {{if .EditAttendanceLog}}
+                <div class="card card__pad" style="border-color: #818cf8;">
+                    <div class="card__head-text" style="margin-bottom:16px; justify-content: space-between; display: flex; width: 100%;">
+                        <span style="display: flex; align-items: center; gap: 8px;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                            <span class="card__title" style="color: #818cf8;">ویرایش تردد پرسنل</span>
+                        </span>
+                        <a href="/?tab=attendance" style="font-size: 12px; color: var(--text-faint); text-decoration: none;">✕ لغو</a>
+                    </div>
+                    <form action="/manual-attendance" method="POST" class="form">
+                        <input type="hidden" name="tab" value="attendance">
+                        <input type="hidden" name="attendance_id" value="{{.EditAttendanceLog.ID}}">
+                        <div class="field">
+                            <label>کد پرسنلی کارمند هدف</label>
+                            <input type="text" name="target_employee" value="{{.EditAttendanceLog.EmployeeCode}}" required>
+                        </div>
+                        <div class="field">
+                            <label>تاریخ روز مورد نظر (شمسی)</label>
+                            <input type="text" name="shamsi_date" value="{{.EditAttendanceLog.ShamsiDate}}" data-jdp required class="tabular">
+                        </div>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>ساعت ورود</label>
+                                <input type="text" name="check_in_time" value="{{.EditAttendanceLog.CheckIn}}" placeholder="8:35" required class="tabular">
+                            </div>
+                            <div class="field">
+                                <label>ساعت خروج</label>
+                                <input type="text" name="check_out_time" value="{{.EditAttendanceLog.CheckOut}}" placeholder="16:30" class="tabular">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="background-color: #6366f1;">اعمال اصلاحات تردد</button>
+                    </form>
+                </div>
+                {{else}}
                 <div class="card card__pad">
                     <div class="card__head-text" style="margin-bottom:16px;">
                         <span class="card__title">ثبت تردد اصلاحی پرسنل</span>
@@ -198,6 +463,7 @@
                         <button type="submit" class="btn btn-amber">ثبت تردد اصلاحی</button>
                     </form>
                 </div>
+                {{end}}
             </div>
         </div>
         {{end}}
@@ -205,6 +471,44 @@
         {{if eq .CurrentTab "worklog"}}
         <div class="layout-2 reverse">
             <div class="stack">
+                {{if .EditLog}}
+                <div class="card card__pad" style="border-color:var(--indigo);">
+                    <div class="card__head" style="margin:-22px -22px 18px;padding:16px 20px;">
+                        <div class="card__head-text">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                            <span class="card__title">ویرایش گزارش کار</span>
+                        </div>
+                        <a href="/?tab=worklog" class="btn-link" style="color:var(--text-faint);">✕ لغو</a>
+                    </div>
+                    <form action="/edit-worklog" method="POST" class="form">
+                        <input type="hidden" name="tab" value="worklog">
+                        <input type="hidden" name="log_id" value="{{.EditLog.ID}}">
+                        <div class="field">
+                            <label>پروژهٔ هدف</label>
+                            <select name="project_id">
+                                {{range .Projects}}
+                                <option value="{{.ID}}" {{if eq $.EditLog.ProjectID .ID}}selected{{end}}>{{.Name}}</option>
+                                {{end}}
+                            </select>
+                        </div>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>تاریخ کارکرد (شمسی)</label>
+                                <input type="text" name="shamsi_date" value="{{.EditLog.ShamsiDate}}" data-jdp required class="tabular">
+                            </div>
+                            <div class="field">
+                                <label>مدت کارکرد (ساعت:دقیقه)</label>
+                                <input type="text" name="hours" value="{{.EditLog.FormattedHours}}" required class="tabular" dir="ltr">
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>شرح جزئیات اقدامات مدیریتی</label>
+                            <textarea name="description" rows="3" required>{{.EditLog.Description}}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">اعمال تغییرات نهایی</button>
+                    </form>
+                </div>
+                {{else}}
                 <div class="card card__pad">
                     <div class="card__head-text" style="margin-bottom:16px;">
                         <span class="card__title">ثبت کارکرد روزانهٔ مدیر</span>
@@ -225,8 +529,8 @@
                                 <input type="text" name="shamsi_date" value="{{.CurrentDate}}" data-jdp required class="tabular">
                             </div>
                             <div class="field">
-                                <label>مدت کارکرد (ساعت)</label>
-                                <input type="number" step="0.25" name="hours" placeholder="مثلاً 4" required class="tabular">
+                                <label>مدت کارکرد (ساعت:دقیقه)</label>
+                                <input type="text" name="hours" placeholder="مثلاً 4:30" required class="tabular" dir="ltr">
                             </div>
                         </div>
                         <div class="field">
@@ -236,6 +540,7 @@
                         <button type="submit" class="btn btn-primary">ثبت کارکرد</button>
                     </form>
                 </div>
+                {{end}}
             </div>
 
             <div class="stack">
@@ -244,18 +549,26 @@
                     <div class="table-wrap">
                         <table class="dt">
                             <thead>
-                                <tr><th>تاریخ</th><th>پروژه</th><th>شرح فرآیند</th><th>مدت</th><th>حذف</th></tr>
+                                <tr><th>تاریخ</th><th>پروژه</th><th>شرح فرآیند</th><th>مدت</th><th style="text-align:center;">عملیات</th></tr>
                             </thead>
                             <tbody>
                                 {{range .WorkLogs}}
-                                {{if eq .EmployeeCode "ADMIN"}}
+                                {{if eq .EmployeeCode $.CurrentUser}}
                                 <tr>
                                     <td class="cell-strong tabular">{{.ShamsiDate}}</td>
                                     <td>{{.ProjectName}}</td>
                                     <td class="cell-desc">{{.Description}}</td>
-                                    <td class="tabular">{{.HoursSpent}} ساعت</td>
-                                    <td>
-                                        <a href="/delete-worklog?id={{.ID}}&tab=worklog" onclick="return confirm('آیا مطمئن هستید؟')" class="btn-link danger">حذف</a>
+                                    <td class="tabular">{{.FormattedHours}} ساعت</td>
+                                    <td class="cell-actions" style="text-align:center;">
+                                        <a href="/?edit_id={{.ID}}&tab=worklog" class="btn-link edit" style="color: #818cf8;">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:middle;margin-left:4px;"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                            ویرایش
+                                        </a>
+                                        <span class="cell-sep" style="margin: 0 8px; border-right: 1px solid rgba(255,255,255,0.1);"></span>
+                                        <a href="/delete-worklog?id={{.ID}}&tab=worklog" onclick="return confirm('آیا مطمئن هستید؟')" class="btn-link danger">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:middle;margin-left:4px;"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>
+                                            حذف
+                                        </a>
                                     </td>
                                 </tr>
                                 {{end}}
@@ -269,87 +582,79 @@
         {{end}}
 
         {{if eq .CurrentTab "management"}}
-        <div class="layout-2">
+        <div class="mgmt-container-grid">
             <div class="stack">
-                <div class="card card__pad">
-                    <div class="card__head-text" style="margin-bottom:16px;">
-                        <span class="card__title">استخدام و تعریف نیروی جدید سازمان</span>
+                <div class="swiss-card">
+                    <div class="swiss-card__title-bar">
+                        <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <span class="swiss-card__title">فهرست پرسنل و وضعیت سازمانی</span>
                     </div>
-                    <form action="/admin/add-employee" method="POST" class="form" autocomplete="off">
-                        <input type="hidden" name="tab" value="management">
-                        <div class="field">
-                            <label>کد پرسنلی (نام کاربری ورود)</label>
-                            <input type="text" name="emp_code" placeholder="مثلاً EMP-1002" required>
-                        </div>
-                        <div class="field">
-                            <label>کلمهٔ عبور امن پرسنل</label>
-                            <input type="password" name="password" placeholder="رمز ورود اختصاصی کارمند" required autocomplete="new-password">
-                        </div>
-                        <div class="field">
-                            <label>نام و نام خانوادگی کامل</label>
-                            <input type="text" name="full_name" placeholder="مثلاً مهندس محمدرضا کریمی" required>
-                        </div>
-                        <div class="field">
-                            <label>سطح دسترسی نقش</label>
-                            <select name="role">
-                                <option value="EMPLOYEE">کارمند عادی واحد پرسنلی</option>
-                                <option value="ADMIN">مدیر ارشد کل سیستم</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-amber">استخدام پرسنل</button>
-                    </form>
+                    
+                    <div class="table-wrap">
+                        <table class="dt" id="global-employees-table">
+                            <thead>
+                                <tr>
+                                    <th>کد نیرو</th>
+                                    <th>نام پرسنل</th>
+                                    <th>نقش دسترسی</th>
+                                    <th style="text-align:center;">عملیات مدیریت شهریه و حقوق</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{range .Employees}}
+                                <tr>
+                                    <td class="cell-strong tabular target-code-cell">{{.EmployeeCode}}</td>
+                                    <td class="cell-strong target-name-cell">{{.FullName}}</td>
+                                    <td>
+                                        {{if eq .Role "ADMIN"}}
+                                        <span class="swiss-badge swiss-badge--admin">مدیر سیستم</span>
+                                        {{else if eq .Role "INTERN"}}
+                                        <span class="swiss-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2);">کارآموز سازمان</span>
+                                        {{else}}
+                                        <span class="swiss-badge swiss-badge--employee">کارمند ارگان</span>
+                                        {{end}}
+                                    </td>
+                                    <td class="cell-actions" style="text-align:center;">
+                                        <a href="/?edit_financial_code={{.EmployeeCode}}&tab=management#financial-form" class="btn btn-soft" style="font-size: 11px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 4px;">
+                                            ⚙️ تنظیم پروفایل حقوقی
+                                        </a>
+                                        {{if ne .EmployeeCode $.CurrentUser}}
+                                        <a href="/admin/delete-employee?id={{.ID}}&tab=management" onclick="return confirm('آیا از خروج و حذف کامل این نیرو اطمینان دارید؟')" class="btn-link danger" style="margin-right: 8px;">حذف کامل</a>
+                                        {{else}}
+                                        <span class="text-faint" style="margin-right: 8px;">غیرقابل حذف</span>
+                                        {{end}}
+                                    </td>
+                                </tr>
+                                {{end}}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
-                <div class="card card__pad" style="border-color:var(--border-strong);">
-                    <div class="card__head-text" style="margin-bottom:16px;">
-                        <span class="card__title">ویرایش مشخصات و رمز عبور پرسنل</span>
+                <div class="swiss-card financial-highlight" id="financial-form">
+                    <div class="swiss-card__title-bar">
+                        <svg class="swiss-card__icon" style="color: #f0b545;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                        <span class="swiss-card__title">تنظیم پروفایل حقوق و حساب بانکی پرسنل</span>
                     </div>
-                    <form action="/admin/edit-employee" method="POST" class="form">
-                        <input type="hidden" name="tab" value="management">
-                        <div class="field">
-                            <label>کد پرسنلی کارمند مورد نظر (جهت تطابق)</label>
-                            <input type="text" name="emp_code" placeholder="مثلاً EMP-1001" required>
-                        </div>
-                        <div class="field">
-                            <label>نام و نام خانوادگی جدید</label>
-                            <input type="text" name="full_name" placeholder="تغییر نام یا اصلاح مشخصات">
-                        </div>
-                        <div class="field">
-                            <label>کلمه عبور جدید</label>
-                            <input type="password" name="password" placeholder="گذرواژه جدید امن">
-                        </div>
-                        <div class="field">
-                            <label>تغییر نقش دسترسی</label>
-                            <select name="role">
-                                <option value="EMPLOYEE">کارمند عادی واحد پرسنلی</option>
-                                <option value="ADMIN">مدیر ارشد کل سیستم</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary" style="background-color: var(--indigo);">بروزرسانی مشخصات</button>
-                    </form>
-                </div>
-
-                <div class="card card__pad" id="financial-form" style="border: 1px solid var(--amber);">
-                    <div class="card__head-text" style="margin-bottom:16px;">
-                        <span class="card__title">📋 تنظیم و پیکربندی پروفایل حقوقی پرسنل</span>
-                    </div>
-                    <form action="/admin/payroll/save-profile" method="POST" class="form">
-                        <div class="field-row">
+                    
+                    <form action="/admin/payroll/save-profile" method="POST" class="form" id="financial-profile-inner-form">
+                        <div class="grid-fields-2">
                             <div class="field">
                                 <label>کد پرسنلی نیرو هدف</label>
-                                <input type="text" name="employee_code" value="{{if .SelectedProfile}}{{.SelectedProfile.EmployeeCode}}{{end}}" placeholder="مثلاً EMP-1001" required>
+                                <input type="text" name="employee_code" value="{{if .SelectedProfile}}{{.SelectedProfile.EmployeeCode}}{{end}}" placeholder="مثلاً EMP-1001" required style="border-color: rgba(240,181,69,0.4);">
                             </div>
                             <div class="field">
-                                <label>نوع قرارداد و بستر حقوقی</label>
-                                <select name="contract_type">
-                                    <option value="REGULAR" {{if .SelectedProfile}}{{if eq .SelectedProfile.ContractType "REGULAR"}}selected{{end}}{{end}}>رسمی قانون کار (بیمه‌ای)</option>
-                                    <option value="HOURLY" {{if .SelectedProfile}}{{if eq .SelectedProfile.ContractType "HOURLY"}}selected{{end}}{{end}}>ساعتی حضور آزاد (توافقی)</option>
+                                <label>نوع قرارداد و مبنای محاسبه حقوق</label>
+                                <select name="contract_type" style="background-color: #1a1f2b;">
+                                    <option value="REGULAR" {{if .SelectedProfile}}{{if eq .SelectedProfile.ContractType "REGULAR"}}selected{{end}}{{end}}>رسمی قانون کار ۱۴۰۵ (ماهانه با بیمه)</option>
+                                    <option value="HOURLY" {{if .SelectedProfile}}{{if eq .SelectedProfile.ContractType "HOURLY"}}selected{{end}}{{end}}>ساعتی حضور آزاد و پروژه‌ای (توافقی)</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="field-row">
+
+                        <div class="grid-fields-2">
                             <div class="field">
-                                <label>کد ملی ۱۰ رقمی کارمند</label>
+                                <label>کد ملی ۱۰ رقمی</label>
                                 <input type="text" name="national_code" value="{{if .SelectedProfile}}{{.SelectedProfile.NationalCode}}{{end}}" placeholder="۱۲۷xxxxxxx" class="tabular">
                             </div>
                             <div class="field">
@@ -357,7 +662,8 @@
                                 <input type="text" name="phone_number" value="{{if .SelectedProfile}}{{.SelectedProfile.PhoneNumber}}{{end}}" placeholder="۰۹۱۳xxxxxxx" class="tabular">
                             </div>
                         </div>
-                        <div class="field-row">
+
+                        <div class="grid-fields-2">
                             <div class="field">
                                 <label>شماره ۱۶ رقمی کارت بانکی</label>
                                 <input type="text" name="bank_card" value="{{if .SelectedProfile}}{{.SelectedProfile.BankCardNumber}}{{end}}" placeholder="۶۰۳۷xxxxxxxxxxxx" class="tabular">
@@ -367,12 +673,13 @@
                                 <input type="text" name="sheba" value="{{if .SelectedProfile}}{{.SelectedProfile.ShebaNumber}}{{end}}" placeholder="024xxxxxxxxxxxxxxxxxxxxxxx" class="tabular" style="text-align: left; direction: ltr;">
                             </div>
                         </div>
-                        <div class="field-row">
+
+                        <div class="grid-fields-2">
                             <div class="field">
-                                <label>وضعیت تاهل نیرو</label>
+                                <label>وضعیت تاهل</label>
                                 <select name="is_married">
                                     <option value="false" {{if .SelectedProfile}}{{if eq .SelectedProfile.IsMarried false}}selected{{end}}{{end}}>مجرد / عدم مشمولیت</option>
-                                    <option value="true" {{if .SelectedProfile}}{{if eq .SelectedProfile.IsMarried true}}selected{{end}}{{end}}>متأهل (حق تاهل سال ۱۴۰۵)</option>
+                                    <option value="true" {{if .SelectedProfile}}{{if eq .SelectedProfile.IsMarried true}}selected{{end}}{{end}}>متأهل (مشمول حق تاهل سال ۱۴۰۵)</option>
                                 </select>
                             </div>
                             <div class="field">
@@ -380,22 +687,24 @@
                                 <input type="number" name="child_count" value="{{if .SelectedProfile}}{{.SelectedProfile.ChildCount}}{{else}}0{{end}}" min="0" required class="tabular">
                             </div>
                         </div>
-                        <div class="field-row">
+
+                        <div class="grid-fields-2">
                             <div class="field">
                                 <label>سابقه و شمولیت پایه سنوات</label>
                                 <select name="eligible_for_seniority">
-                                    <option value="false" {{if .SelectedProfile}}{{if eq .SelectedProfile.EligibleForSeniority false}}selected{{end}}{{end}}>سابقه زیر یکسال (بدون سنوات)</option>
-                                    <option value="true" {{if .SelectedProfile}}{{if eq .SelectedProfile.EligibleForSeniority true}}selected{{end}}{{end}}>بالای یکسال (مشمول سنوات روزانه)</option>
+                                    <option value="false" {{if .SelectedProfile}}{{if eq .SelectedProfile.EligibleForSeniority false}}selected{{end}}{{end}}>سابقه زیر یکسال (بدون سنوات روزانه)</option>
+                                    <option value="true" {{if .SelectedProfile}}{{if eq .SelectedProfile.EligibleForSeniority true}}selected{{end}}{{end}}>بالای یکسال (مشمول سنوات قانون کار)</option>
                                 </select>
                             </div>
                             <div class="field">
-                                <label>نرخ ساعتی اضافه‌کاری (ریال)</label>
+                                <label>نرخ ساعتی اضافه‌کاری توافقی (ریال)</label>
                                 <input type="number" name="custom_overtime_rate" value="{{if .SelectedProfile}}{{.SelectedProfile.CustomOvertimeRate}}{{else}}0{{end}}" placeholder="مثلاً 1058470" required class="tabular">
                             </div>
                         </div>
-                        <div class="field-row">
+
+                        <div class="grid-fields-2">
                             <div class="field">
-                                <label>نرخ ساعت کارکرد (ویژه ساعتی-ریال)</label>
+                                <label>نرخ هر ساعت کارکرد (ویژه قرارداد ساعتی - ریال)</label>
                                 <input type="number" name="hourly_rate" value="{{if .SelectedProfile}}{{.SelectedProfile.HourlyRate}}{{else}}0{{end}}" required class="tabular">
                             </div>
                             <div class="field">
@@ -403,77 +712,122 @@
                                 <input type="number" step="0.1" name="remaining_leave_hours" value="{{if .SelectedProfile}}{{.SelectedProfile.RemainingLeaveHours}}{{else}}0.0{{end}}" required class="tabular">
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-primary" style="background-color: var(--indigo);">ذخیره مشخصات مالی</button>
-                    </form>
-                </div>
 
-                <div class="card card__pad" style="border-color:var(--border-strong);">
-                    <div class="card__head-text" style="margin-bottom:16px;">
-                        <span class="card__title">محاسبه عملکرد و صدور فیش حقوقی</span>
-                    </div>
-                    <form action="/admin/payroll/issue" method="POST" class="form">
-                        <input type="hidden" name="year" value="1405">
-                        <div class="field-row">
-                            <div class="field">
-                                <label>کد پرسنلی کارمند هدف</label>
-                                <input type="text" name="employee_code" value="{{if .SelectedProfile}}{{.SelectedProfile.EmployeeCode}}{{end}}" placeholder="EMP-1001" required>
-                            </div>
-                            <div class="field">
-                                <label>ماه شمسی مورد نظر</label>
-                                <select name="month">
-                                    <option value="1">فروردین</option><option value="2">اردیبهشت</option><option value="3">خرداد</option>
-                                    <option value="4">تیر</option><option value="5">مرداد</option><option value="6">شهریور</option>
-                                    <option value="7">مهر</option><option value="8">آبان</option><option value="9">آذر</option>
-                                    <option value="10">دی</option><option value="11">بهمن</option><option value="12">اسفند</option>
-                                </select>
-                            </div>
+                        <div class="action-row-btn">
+                            <button type="submit" class="btn btn-primary" style="background: linear-gradient(90deg, #4f46e5, #6366f1); padding: 12px 28px; font-weight: 700;">ذخیره و همگام‌سازی مشخصات مالی</button>
                         </div>
-                        <div class="field-row">
-                            <div class="field">
-                                <label>ساعت موظفی این ماه</label>
-                                <input type="number" step="0.1" name="expected_hours" placeholder="مثلاً 178" required class="tabular">
-                            </div>
-                            <div class="field">
-                                <label>کل کارکرد واقعی پر شده نیرو</label>
-                                <input type="number" step="0.1" name="actual_hours" placeholder="مثلاً 170" required class="tabular">
-                            </div>
-                        </div>
-                        <div class="field">
-                            <label>ساعات اضافه‌کاری تایید شده مدیریتی</label>
-                            <input type="number" step="0.1" name="overtime_hours" value="0.0" required class="tabular">
-                        </div>
-                        <button type="submit" class="btn btn-amber">صدور فیش مالی</button>
                     </form>
                 </div>
             </div>
 
             <div class="stack">
-                <div class="card">
-                    <div class="card__head"><span class="card__title">لیست کارکنان فعال ارگان</span></div>
-                    <div class="table-wrap">
-                        <table class="dt">
-                            <thead>
-                                <tr><th>کد نیرو</th><th>نام پرسنل</th><th>نقش سیستم</th><th style="text-align:center;">اقدامات</th></tr>
-                            </thead>
-                            <tbody>
-                                {{range .Employees}}
-                                <tr>
-                                    <td class="cell-strong">{{.EmployeeCode}}</td>
-                                    <td>{{.FullName}}</td>
-                                    <td><span class="tag">{{.Role}}</span></td>
-                                    <td class="cell-actions" style="text-align:center;">
-                                        <a href="/?edit_financial_code={{.EmployeeCode}}&tab=management#financial-form" class="btn-link edit" style="color: var(--indigo); font-weight: bold; margin-left: 10px;">پیکربندی حقوق</a>
-                                        {{if ne .EmployeeCode "ADMIN"}}
-                                        <a href="/admin/delete-employee?id={{.ID}}&tab=management" onclick="return confirm('آیا از خروج و حذف کامل این نیرو اطمینان دارید؟')" class="btn-link danger">حذف</a>
-                                        {{else}}
-                                        <span class="text-faint">غیرقابل حذف</span>
-                                        {{end}}
-                                    </td>
-                                </tr>
-                                {{end}}
-                            </tbody>
-                        </table>
+                <div class="swiss-card" style="border-left: 4px solid var(--amber);">
+                    <div class="swiss-card__title-bar">
+                        <svg class="swiss-card__icon" style="color: #6366f1;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        <span class="swiss-card__title">محاسبه عملکرد و صدور آنی فیش حقوقی</span>
                     </div>
+                    
+                    <form action="/admin/payroll/issue" method="POST" class="form" id="issue-payroll-form">
+                        <input type="hidden" name="year" value="1405">
+                        
+                        <div class="field">
+                            <label>کارمند هدف جهت محاسبات</label>
+                            <input type="text" name="employee_code" id="payroll-target-code-input" value="{{if .SelectedProfile}}{{.SelectedProfile.EmployeeCode}}{{end}}" placeholder="کد پرسنلی مثلاً EMP-1001" required>
+                        </div>
+
+                        <div class="field">
+                            <label>انتخاب ماه دوره شمسی (سال ۱۴۰۵)</label>
+                            <select name="month">
+                                <option value="1">فروردین</option><option value="2">اردیبهشت</option><option value="3">خرداد</option>
+                                <option value="4">تیر</option><option value="5">مرداد</option><option value="6">شهریور</option>
+                                <option value="7">مهر</option><option value="8">آبان</option><option value="9">آذر</option>
+                                <option value="10">دی</option><option value="11">بهمن</option><option value="12">اسفند</option>
+                            </select>
+                        </div>
+
+                        <div class="grid-fields-2">
+                            <div class="field">
+                                <label>ساعت موظفی این ماه</label>
+                                <input type="text" name="expected_hours" placeholder="مثلاً 178:00" required class="tabular" dir="ltr">
+                            </div>
+                            <div class="field">
+                                <label>کل کارکرد واقعی پر شده نیرو</label>
+                                <input type="text" name="actual_hours" placeholder="مثلاً 170:30" required class="tabular" dir="ltr">
+                            </div>
+                            <div class="field">
+                                <label>ساعات اضافه‌کاری تایید شده مدیریتی</label>
+                                <input type="text" name="overtime_hours" value="00:00" required class="tabular" dir="ltr">
+                            </div>
+                        </div> <button type="submit" class="btn btn-amber" style="width: 100%; justify-content: center; font-weight: 700; padding: 12px 0; margin-top: 10px;">⚡ محاسبه و صدور فیش مالی نهایی</button>
+                    </form>
+                </div>
+
+                <div class="swiss-card">
+                    <div class="swiss-card__title-bar">
+                        <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                        <span class="swiss-card__title">استخدام و تعریف کاربر جدید در ارگان</span>
+                    </div>
+                    
+                    <form action="/admin/add-employee" method="POST" class="form" autocomplete="off">
+                        <input type="hidden" name="tab" value="management">
+                        <div class="field">
+                            <label>کد پرسنلی واحد (نام کاربری ورود)</label>
+                            <input type="text" name="emp_code" placeholder="مثلاً EMP-1002" required>
+                        </div>
+                        <div class="field">
+                            <label>کلمهٔ عبور امن اولیه کارمند</label>
+                            <input type="password" name="password" placeholder="گذرواژه اختصاصی جهت اولین ورود" required autocomplete="new-password">
+                        </div>
+                        <div class="field">
+                            <label>نام و نام خانوادگی کامل پرسنل</label>
+                            <input type="text" name="full_name" placeholder="مثلاً مهندس رضا کریمی" required>
+                        </div>
+                        <div class="field">
+                            <label>سطح دسترسی و نقش در سامانه</label>
+                            <select name="role">
+                                <option value="EMPLOYEE">کارمند عادی واحد پرسنلی</option>
+                                <option value="INTERN">کارآموز (بدون دسترسی مدیریت)</option>
+                                <option value="ADMIN">مدیر ارشد کل سیستم</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 11px 0;">ثبت استخدام نیرو</button>
+                    </form>
+                </div>
+
+                <div class="swiss-card">
+                    <div class="swiss-card__title-bar">
+                        <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <span class="swiss-card__title">ویرایش هوشمند مشخصات و کد پرسنلی</span>
+                    </div>
+                    
+                    <form action="/admin/edit-employee" method="POST" class="form">
+                        <input type="hidden" name="tab" value="management">
+                        <div class="field">
+                            <label>کد پرسنلی فعلی هدف (جهت شناسایی در سیستم)</label>
+                            <input type="text" name="original_emp_code" placeholder="مثلاً EMP-1001" required>
+                        </div>
+                        <div class="field">
+                            <label>کد پرسنلی جدید (فقط در صورت نیاز به تغییر وارد کنید)</label>
+                            <input type="text" name="emp_code" placeholder="کد جدید (اگر تغییر نمی‌کند خالی بگذارید)">
+                        </div>
+                        <div class="field">
+                            <label>اصلاح نام و نام خانوادگی (اختیاری)</label>
+                            <input type="text" name="full_name" placeholder="نام جدید یا تصحیح نگارشی">
+                        </div>
+                        <div class="field">
+                            <label>تغییر کلمه عبور امن</label>
+                            <input type="password" name="password" placeholder="تنظیم رمز جدید (برای عدم تغییر خالی بگذارید)">
+                        </div>
+                        <div class="field">
+                            <label>تغییر نقش دسترسی در سامانه</label>
+                            <select name="role">
+                                <option value="EMPLOYEE">کارمند عادی واحد پرسنلی</option>
+                                <option value="INTERN">کارآموز (بدون دسترسی مدیریت)</option>
+                                <option value="ADMIN">مدیر ارشد کل سیستم</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-soft" style="width: 100%; justify-content: center; padding: 11px 0; font-weight: bold;">بروزرسانی ریشه‌ای مشخصات پرسنل</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -602,13 +956,13 @@
                     </div>
                     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                         <a href="/export?employee_code={{.SelectedFilter}}&project_id={{.SelectedProjectFilter}}&filter_month={{.SelectedMonthFilter}}" class="btn btn-primary" style="width:auto;">استخراج گزارش اکسل</a>
-                        <span class="stat-pill">مجموع زمان: <b class="tabular">{{.TotalHours}}</b> ساعت</span>
+                        <span class="stat-pill">مجموع زمان: <b class="tabular">{{.TotalHoursFormatted}}</b> ساعت</span>
                     </div>
                 </div>
                 <div class="table-wrap">
                     <table class="dt">
                         <thead>
-                            <tr><th>کد نیرو</th><th>تاریخ فعالیت</th><th>پروژه</th><th>شرح اقدامات روزانه</th><th>مدت کارکرد</th><th>حذف</th></tr>
+                            <tr><th>کد نیرو</th><th>تاریخ فعالیت</th><th>پروژه</th><th>شرح اقدامات روزانه</th><th>مدت کارکرد</th><th style="text-align:center;">عملیات</th></tr>
                         </thead>
                         <tbody>
                             {{range .WorkLogs}}
@@ -617,9 +971,17 @@
                                 <td class="tabular text-faint">{{.ShamsiDate}}</td>
                                 <td class="cell-strong">{{.ProjectName}}</td>
                                 <td class="cell-desc">{{.Description}}</td>
-                                <td class="cell-strong tabular">{{.HoursSpent}} ساعت</td>
-                                <td>
-                                    <a href="/delete-worklog?id={{.ID}}&tab=project_report" onclick="return confirm('آیا مطمئن هستید؟')" class="btn-link danger">حذف</a>
+                                <td class="cell-strong tabular">{{.FormattedHours}} ساعت</td>
+                                <td class="cell-actions" style="text-align:center;">
+                                    <a href="/?edit_id={{.ID}}&tab=project_report" class="btn-link edit" style="color: #818cf8;">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:middle;margin-left:4px;"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                        ویرایش
+                                    </a>
+                                    <span class="cell-sep" style="margin: 0 8px; border-right: 1px solid rgba(255,255,255,0.1);"></span>
+                                    <a href="/delete-worklog?id={{.ID}}&tab=project_report" onclick="return confirm('آیا مطمئن هستید؟')" class="btn-link danger">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:middle;margin-left:4px;"><path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg>
+                                        حذف
+                                    </a>
                                 </td>
                             </tr>
                             {{else}}
@@ -635,6 +997,61 @@
     </main>
 </div>
 
+{{if eq .CurrentTab "dashboard"}}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const pieCtx = document.getElementById('pieChart');
+        if (pieCtx) {
+            new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: {{.PieLabelsJSON}},
+                    datasets: [{
+                        data: {{.PieDataJSON}},
+                        backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f43f5e'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'right', labels: { color: '#cbd5e1', font: { family: 'IRANSansWeb' } } }
+                    }
+                }
+            });
+        }
+
+        const barCtx = document.getElementById('barChart');
+        if (barCtx) {
+            new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{.BarLabelsJSON}},
+                    datasets: [{
+                        label: 'مجموع ساعت کارکرد',
+                        data: {{.BarDataJSON}},
+                        backgroundColor: 'rgba(56, 189, 248, 0.8)',
+                        borderRadius: 6,
+                        barThickness: 30
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8a94a6', font: { family: 'IRANSansWeb' } } },
+                        x: { grid: { display: false }, ticks: { color: '#8a94a6', font: { family: 'IRANSansWeb' } } }
+                    }
+                }
+            });
+        }
+    });
+</script>
+{{end}}
+
 <script src="/static/js/jalali-datepicker.min.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
@@ -642,6 +1059,90 @@
             showTodayBtn: true,
             hideAfterSelect: true
         });
+
+        const activeEmpCode = "{{if .SelectedProfile}}{{.SelectedProfile.EmployeeCode}}{{end}}";
+        const activeContractType = "{{if .SelectedProfile}}{{.SelectedProfile.ContractType}}{{end}}";
+        if (activeEmpCode && activeContractType) {
+            localStorage.setItem("contract_type_" + activeEmpCode, activeContractType);
+        }
+
+        const payrollForm = document.getElementById("issue-payroll-form");
+        if (payrollForm) {
+            payrollForm.addEventListener("submit", function() {
+                const inputCode = document.getElementById("payroll-target-code-input");
+                if (inputCode && inputCode.value) {
+                    localStorage.setItem("last_processed_emp_code", inputCode.value.trim());
+                }
+            });
+        }
+
+        let currentViewMode = "REGULAR"; 
+        
+        function applyPayslipLayout(mode) {
+            const regularRows = document.querySelectorAll(".regular-only");
+            const lblBaseSalary = document.getElementById("lbl-base-salary");
+            const valBaseSalary = document.getElementById("val-base-salary");
+            
+            if (mode === "HOURLY") {
+                regularRows.forEach(el => el.style.display = "none");
+                if (lblBaseSalary) lblBaseSalary.textContent = "کارکرد و دستمزد ساعتی دوره";
+                if (valBaseSalary) valBaseSalary.textContent = "محاسبه بر اساس نرخ ساعتی توافقی";
+            } else {
+                regularRows.forEach(el => el.style.display = "table-row");
+                if (lblBaseSalary) lblBaseSalary.textContent = "حقوق پایه و کارکرد ماهانه دوره";
+                if (valBaseSalary) valBaseSalary.textContent = "مبنای قانون کار";
+            }
+        }
+
+        const alertMsgEl = document.querySelector(".alert__msg");
+        if (alertMsgEl) {
+            const textContent = alertMsgEl.textContent || alertMsgEl.innerText;
+            if (textContent.includes("فیش حقوقی صادر شد")) {
+                document.querySelector(".alert").style.display = "none";
+                
+                const matchedDigits = textContent.match(/\d+/);
+                let rawSalaryAmount = matchedDigits ? matchedDigits[0] : "0";
+                let formattedSalary = Number(rawSalaryAmount).toLocaleString('fa-IR') + " ریال";
+                
+                const payslipBox = document.getElementById("professional-payslip-modal");
+                if (payslipBox) {
+                    payslipBox.style.display = "block";
+                    document.getElementById("payslip-net-salary").textContent = formattedSalary;
+                    
+                    let issuedCode = localStorage.getItem("last_processed_emp_code") || "---";
+                    let resolvedEmpName = issuedCode;
+                    const employeeRows = document.querySelectorAll("#global-employees-table tbody tr");
+                    employeeRows.forEach(row => {
+                        const codeCell = row.querySelector(".target-code-cell");
+                        const nameCell = row.querySelector(".target-name-cell");
+                        if (codeCell && nameCell && codeCell.textContent.trim() === issuedCode) {
+                            resolvedEmpName = nameCell.textContent.trim();
+                        }
+                    });
+                    document.getElementById("payslip-emp-name").textContent = resolvedEmpName;
+                    
+                    const monthSelect = document.querySelector('#issue-payroll-form select[name="month"]');
+                    if (monthSelect) {
+                        document.getElementById("payslip-month").textContent = monthSelect.options[monthSelect.selectedIndex].text;
+                    }
+
+                    currentViewMode = localStorage.getItem("contract_type_" + issuedCode) || "REGULAR";
+                    applyPayslipLayout(currentViewMode);
+
+                    payslipBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        }
+
+        const toggleBtn = document.getElementById("btn-toggle-payslip-type");
+        if (toggleBtn) {
+            toggleBtn.addEventListener("click", function() {
+                let issuedCode = localStorage.getItem("last_processed_emp_code") || "generic";
+                currentViewMode = (currentViewMode === "REGULAR") ? "HOURLY" : "REGULAR";
+                localStorage.setItem("contract_type_" + issuedCode, currentViewMode);
+                applyPayslipLayout(currentViewMode);
+            });
+        }
     });
 </script>
 <script src="/static/js/app.js"></script>
