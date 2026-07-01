@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ورود به سامانه کارکرد شمسی</title>
+    <link rel="stylesheet" href="/static/css/theme.css">
+</head>
+<body>
+    <div class="atmosphere"></div>
+
+    <div class="auth-shell">
+        <div class="auth-card">
+            <div class="scanline"></div>
+
+            <div class="auth-mark">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9"/>
+                    <path d="M12 7v5l3.2 2"/>
+                </svg>
+            </div>
+
+            <h1 class="auth-title">سامانهٔ کارکرد شمسی</h1>
+            <p class="auth-sub">برای ثبت تردد و گزارش کارکرد، با کد پرسنلی و کلمهٔ عبور سازمانی خود وارد شوید.</p>
+
+            {{if .Message}}
+            <div class="auth-alert">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/>
+                </svg>
+                <span>{{.Message}}</span>
+            </div>
+            {{end}}
+
+            <form action="/login" method="POST" class="form">
+                <div class="field auth-field">
+                    <label>کد پرسنلی / نام کاربری</label>
+                    <input type="text" name="username" placeholder="مثلاً EMP-1001 یا ADMIN" required autocomplete="username">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="8" r="4.5"/>
+                    </svg>
+                </div>
+                <div class="field auth-field">
+                    <label>کلمهٔ عبور امن</label>
+                    <input type="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="4.5" y="11" width="15" height="9.5" rx="2.2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/>
+                    </svg>
+                </div>
+                <button type="submit" class="btn btn-primary" style="padding:13px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 5l6 7-6 7"/><path d="M20 12H4"/>
+                    </svg>
+                    ورود امن به پورتال
+                </button>
+            </form>
+
+            <div class="auth-footnote">
+                <span>امروز: {{.CurrentDate}}</span>
+                <i style="width:4px;height:4px;border-radius:50%;background:var(--text-faint);display:inline-block;"></i>
+                <span>دسترسی رمزنگاری‌شده</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
