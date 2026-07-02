@@ -625,3 +625,289 @@ table.dt tbody tr:last-child td{ border-bottom:none; }
 .select-search-wrapper.open {
     z-index: 99999;
 }
+
+/* ==========================================================================
+   REDESIGN v2 — چیدمان نوار کناری (Sidebar Shell)
+   مفهوم بصری: «دفتر کل بازشده» — نوار کناری به‌مثابه عطف دفتر، با بخیه‌های
+   نقطه‌چین که یادآور صحافی دفاتر حسابداری است؛ محتوا به‌مثابه صفحات دفتر.
+   ========================================================================== */
+
+:root{
+  --sidebar-w: 264px;
+  --sidebar-w-collapsed: 84px;
+  --topbar-h: 60px;
+  --surface-glass: rgba(17,20,29,.86);
+  --stitch: repeating-linear-gradient(180deg, var(--border-strong) 0 6px, transparent 6px 13px);
+}
+
+.app-shell{
+  position:relative; z-index:1;
+  display:flex;
+  align-items:stretch;
+  min-height:100vh;
+}
+.nav-toggle-input{ position:absolute; opacity:0; width:0; height:0; pointer-events:none; }
+
+/* ----- نوار کناری ----- */
+.sidebar{
+  flex:none;
+  width:var(--sidebar-w);
+  min-height:100vh;
+  display:flex; flex-direction:column;
+  background:var(--surface-glass);
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+  border-inline-start:1px solid var(--border);
+  position:sticky; top:0; align-self:flex-start;
+  z-index:120;
+}
+.sidebar::after{
+  content:''; position:absolute; inset-block:0; inset-inline-start:0; width:3px;
+  background:var(--stitch);
+  opacity:.55;
+}
+.sidebar__brand{
+  display:flex; align-items:center; gap:11px;
+  padding:20px 18px 16px;
+  border-bottom:1px solid var(--border);
+}
+.sidebar__brand .brand__mark{ width:38px; height:38px; }
+.sidebar__nav{
+  flex:1; overflow-y:auto;
+  padding:16px 12px; display:flex; flex-direction:column; gap:3px;
+}
+.sidebar__nav-label{
+  font-size:10px; font-weight:700; letter-spacing:.09em; color:var(--text-faint);
+  text-transform:uppercase; padding:6px 12px 10px;
+}
+.side-link{
+  display:flex; align-items:center; gap:11px;
+  padding:10px 13px; border-radius:var(--radius-sm);
+  font-weight:700; font-size:12.5px; color:var(--text-soft);
+  border:1px solid transparent; position:relative; transition:.15s;
+}
+.side-link svg{ width:16px; height:16px; flex:none; opacity:.8; stroke:currentColor; }
+.side-link:hover{ background:var(--surface-2); color:var(--text); }
+.side-link.is-active{
+  background:linear-gradient(155deg, var(--indigo-soft), rgba(110,123,250,.05));
+  color:#fff; border-color:rgba(110,123,250,.35);
+}
+.side-link.is-active svg{ opacity:1; stroke:var(--indigo); }
+.side-link.is-active::before{
+  content:''; position:absolute; inset-inline-start:-13px; top:50%; translate:0 -50%;
+  width:3px; height:18px; border-radius:99px;
+  background:linear-gradient(180deg, var(--indigo), var(--indigo-2));
+  box-shadow:0 0 12px -2px rgba(110,123,250,.9);
+}
+.sidebar__footer{
+  border-top:1px solid var(--border);
+  padding:14px 14px 16px;
+  display:flex; flex-direction:column; gap:10px;
+}
+.sidebar__footer .user-chip{ width:100%; justify-content:flex-start; background:var(--surface-2); }
+.sidebar__footer .clock-chip{ width:100%; justify-content:center; }
+.sidebar__footer .btn-logout{ width:100%; justify-content:center; }
+
+.sidebar-backdrop{ display:none; }
+
+@media (max-width: 1040px){
+  .sidebar{
+    position:fixed; inset-block:0; inset-inline-start:0;
+    transform:translateX(100%);
+    transition:transform .28s cubic-bezier(.4,0,.2,1);
+    box-shadow:-30px 0 60px -20px rgba(0,0,0,.6);
+  }
+  html[dir="rtl"] .sidebar{ transform:translateX(100%); }
+  .nav-toggle-input:checked ~ .sidebar{ transform:translateX(0); }
+  .sidebar-backdrop{
+    display:block; position:fixed; inset:0; background:rgba(4,5,10,.6);
+    opacity:0; pointer-events:none; transition:opacity .28s ease; z-index:110;
+  }
+  .nav-toggle-input:checked ~ .sidebar-backdrop{ opacity:1; pointer-events:auto; }
+}
+
+/* ----- ناحیهٔ اصلی محتوا ----- */
+.app-main{ flex:1; min-width:0; display:flex; flex-direction:column; }
+.topbar{
+  position:sticky; top:0; z-index:60;
+  display:flex; align-items:center; gap:14px;
+  height:var(--topbar-h); padding:0 20px;
+  background:rgba(8,10,17,.78);
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+}
+.topbar__burger{
+  display:none; align-items:center; justify-content:center;
+  width:36px; height:36px; border-radius:var(--radius-sm);
+  background:var(--surface); border:1px solid var(--border-strong);
+  cursor:pointer; flex:none;
+}
+.topbar__burger svg{ width:17px; height:17px; stroke:var(--text-soft); }
+.topbar__brand-mobile{ display:none; align-items:center; gap:9px; }
+.topbar__brand-mobile .brand__mark{ width:30px; height:30px; }
+.topbar__title{ font-weight:700; font-size:13px; color:var(--text); }
+.topbar__spacer{ flex:1; }
+.topbar .clock-chip{ }
+
+@media (max-width: 1040px){
+  .topbar__burger{ display:flex; }
+  .topbar__brand-mobile{ display:flex; }
+  .topbar .header-meta > .user-chip .user-chip__name,
+  .topbar .header-meta > .user-chip .user-chip__role{ display:none; }
+}
+@media (max-width: 700px){
+  .topbar .clock-chip__date{ display:none; }
+  .topbar .header-meta{ gap:6px; }
+}
+
+/* ----- نشان زبانهٔ فعال داخل صفحه (سرتیتر بخش) ----- */
+.section-lead{
+  display:flex; align-items:center; justify-content:space-between; gap:14px;
+  flex-wrap:wrap; margin-bottom:20px;
+}
+.section-lead__text{ display:flex; flex-direction:column; gap:4px; }
+.section-lead__title{ font-size:16.5px; font-weight:700; color:var(--text); }
+.section-lead__hint{ font-size:11.5px; color:var(--text-faint); }
+
+/* ==========================================================================
+   زیربخش‌های داخل «مدیریت و حقوق پرسنل» — رفع شلوغی با ناوبری محلی
+   ========================================================================== */
+.subtab-bar{
+  display:flex; gap:8px; flex-wrap:wrap;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-md); padding:6px; margin-bottom:22px;
+}
+.subtab-btn{
+  display:flex; align-items:center; gap:8px;
+  padding:9px 16px; border-radius:var(--radius-sm);
+  font-weight:700; font-size:12.5px; color:var(--text-faint);
+  background:transparent; border:1px solid transparent; transition:.15s;
+  flex:1; justify-content:center; min-width:150px;
+}
+.subtab-btn svg{ width:15px; height:15px; }
+.subtab-btn:hover{ color:var(--text); background:var(--surface-2); }
+.subtab-btn.is-active{
+  color:#fff; background:linear-gradient(155deg, var(--indigo), var(--indigo-2));
+  box-shadow:0 8px 18px -10px rgba(110,123,250,.9);
+}
+[data-subtab-panel]{ display:contents; }
+[data-subtab-panel].is-subtab-hidden{ display:none !important; }
+
+/* ==========================================================================
+   کارت‌های سبک «Swiss» (تجمیع‌شده از استایل‌های درون‌خطی پیشین)
+   ========================================================================== */
+.swiss-card{
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-lg); box-shadow:var(--shadow-card);
+  padding:22px; margin-bottom:22px; position:relative; z-index:1;
+  transition:.2s;
+}
+.swiss-card:last-child{ margin-bottom:0; }
+.swiss-card:hover{ border-color:var(--border-strong); }
+.swiss-card__title-bar{
+  display:flex; align-items:center; gap:11px; margin-bottom:20px;
+  padding-bottom:13px; border-bottom:1px solid var(--border);
+}
+.swiss-card__title{ font-size:13.5px; font-weight:700; color:var(--text); }
+.swiss-card__icon{ width:19px; height:19px; color:var(--amber); flex:none; }
+.financial-highlight{
+  border-color:rgba(240,181,69,.28) !important;
+  background:linear-gradient(185deg, rgba(29,25,15,.5), var(--surface)) !important;
+}
+.grid-fields-2{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin-bottom:16px; }
+.swiss-badge{ padding:4px 10px; border-radius:6px; font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; }
+.swiss-badge--admin{ background:var(--indigo-soft); color:var(--indigo); border:1px solid rgba(110,123,250,.25); }
+.swiss-badge--employee{ background:var(--amber-soft); color:var(--amber); border:1px solid rgba(240,181,69,.25); }
+
+.mgmt-container-grid{ display:grid; grid-template-columns:1fr; gap:22px; align-items:start; }
+@media (min-width:1100px){ .mgmt-container-grid{ grid-template-columns:1.4fr 1fr; } }
+
+.live-status-card{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:15px 16px; background:var(--surface-2); border-radius:var(--radius-sm); border:1px solid var(--border);
+}
+.live-dot{ width:11px; height:11px; border-radius:50%; display:inline-block; }
+.live-dot.active{ background:var(--emerald); box-shadow:0 0 10px var(--emerald); animation:pulse-dot2 2s infinite; }
+.live-dot.inactive{ background:var(--text-faint); }
+@keyframes pulse-dot2{
+  0%{ box-shadow:0 0 0 0 rgba(51,209,152,.6); } 70%{ box-shadow:0 0 0 9px rgba(51,209,152,0); } 100%{ box-shadow:0 0 0 0 rgba(51,209,152,0); }
+}
+
+.charts-grid{ display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:22px; }
+@media (max-width:900px){ .charts-grid{ grid-template-columns:1fr; } }
+.chart-container{ background:var(--surface); padding:22px; border-radius:var(--radius-lg); border:1px solid var(--border); }
+.dashboard-filter-form{
+  display:flex; flex-wrap:wrap; gap:14px; background:var(--surface); padding:16px;
+  border-radius:var(--radius-md); margin-bottom:22px; border:1px solid var(--border); align-items:end;
+}
+
+/* ----- کارت خلاصهٔ فیش (لیست) ----- */
+.payslip-mini-card{
+  background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-sm);
+  padding:15px 16px; display:flex; align-items:center; justify-content:space-between;
+  gap:16px; margin-bottom:11px; transition:.2s; flex-wrap:wrap;
+}
+.payslip-mini-card:hover{ border-color:var(--emerald); background:rgba(51,209,152,.05); }
+
+/* ----- برگهٔ چاپی فیش (کاغذ سفید عمدی برای چاپ رسمی) ----- */
+.payslip-paper{
+  background:#fff; color:#111827; padding:34px 38px; border-radius:var(--radius-md);
+  box-shadow:0 20px 45px -18px rgba(0,0,0,.7); margin-top:14px; border:1px solid #e5e7eb;
+  position:relative; overflow:hidden; display:none; font-family:'IRANSansWeb', sans-serif;
+}
+.payslip-paper::before{ content:''; position:absolute; top:0; left:0; right:0; height:7px; background:linear-gradient(90deg, var(--emerald), var(--indigo)); }
+.payslip-header{ text-align:center; border-bottom:2px dashed #d1d5db; padding-bottom:18px; margin-bottom:22px; }
+.payslip-header h2{ margin:0 0 7px; color:#111827; font-size:21px; font-weight:900; }
+.payslip-header span{ font-size:12.5px; color:#6b7280; }
+.payslip-info-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; background:#f9fafb; padding:16px; border-radius:8px; margin-bottom:22px; font-size:12px; border:1px solid #f3f4f6; }
+.payslip-info-grid strong{ color:#111827; font-size:13.5px; display:block; margin-top:4px; }
+.payslip-detail-table{ width:100%; border-collapse:collapse; text-align:right; margin-bottom:22px; }
+.payslip-detail-table th, .payslip-detail-table td{ padding:11px 14px; border-bottom:1px solid #e5e7eb; font-size:12.5px; }
+.payslip-detail-table th{ background:#f3f4f6; color:#374151; font-weight:700; }
+.payslip-detail-table td{ color:#374151; }
+.payslip-total{ background:#111827; color:#fff; padding:17px 24px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; margin-bottom:34px; }
+.payslip-total span{ font-size:14px; }
+.payslip-total strong{ font-size:22px; color:var(--emerald); font-weight:900; }
+.payslip-signatures{ display:flex; justify-content:space-between; padding-top:18px; font-size:12.5px; color:#6b7280; font-weight:700; }
+
+@media print{
+  body *{ visibility:hidden !important; }
+  body.printing .print-active, body.printing .print-active *{ visibility:visible !important; }
+  body.printing .print-active{
+    position:fixed !important; left:0 !important; top:0 !important;
+    width:100vw !important; height:100vh !important; margin:0 !important; padding:28px !important;
+    background:#fff !important; color:#000 !important; box-shadow:none !important; border:none !important;
+    z-index:999999 !important;
+  }
+  .payslip-total{ background:#f3f4f6 !important; color:#000 !important; border:2px solid #000 !important; box-shadow:none !important; }
+  .payslip-total strong{ color:#000 !important; }
+  .no-print{ display:none !important; }
+  ::-webkit-scrollbar{ display:none; }
+}
+
+/* ==========================================================================
+   ابزارهای فایل و آواتار (تجمیع‌شده)
+   ========================================================================== */
+.dynamic-avatar{ width:100%; height:100%; object-fit:cover; }
+.file-input-custom{
+  background:var(--surface-2); border:1px dashed var(--border-strong); padding:10px;
+  border-radius:var(--radius-sm); color:var(--text); width:100%; font-family:inherit;
+  font-size:13px; cursor:pointer; transition:.2s;
+}
+.file-input-custom:hover{ border-color:var(--indigo); }
+.file-input-custom::file-selector-button{
+  background:var(--indigo); border:none; padding:6px 12px; border-radius:4px; color:#fff;
+  cursor:pointer; margin-left:10px; font-family:inherit; font-weight:700;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .sidebar, .nav-toggle-input:checked ~ .sidebar, .sidebar-backdrop{ transition:none !important; }
+}
+
+/* ==========================================================================
+   هماهنگی بصری صفحهٔ ورود با هویت «دفتر کل» نوار کناری
+   ========================================================================== */
+.auth-card{ position:relative; }
+.auth-card::after{
+  content:''; position:absolute; inset-block:0; inset-inline-start:0; width:3px;
+  background:var(--stitch); opacity:.5; pointer-events:none;
+}

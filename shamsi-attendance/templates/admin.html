@@ -9,160 +9,116 @@
     <link rel="stylesheet" href="/static/css/theme.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <style>
-        .mgmt-container-grid { display: grid; grid-template-columns: 1fr; gap: 24px; align-items: start; }
-        @media (min-width: 1100px) { .mgmt-container-grid { grid-template-columns: 1.4fr 1fr; } }
-        
-        .swiss-card { background: rgba(23, 28, 38, 0.7); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 14px; backdrop-filter: blur(20px); padding: 24px; margin-bottom: 24px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; z-index: 1; }
-        .swiss-card:hover { border-color: rgba(255, 255, 255, 0.12); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2); }
-        .swiss-card__title-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
-        .swiss-card__title { font-size: 16px; font-weight: 700; color: #ffffff; }
-        .swiss-card__icon { width: 20px; height: 20px; color: var(--amber); }
-        
-        .financial-highlight { border: 1px solid rgba(240, 181, 69, 0.25) !important; background: linear-gradient(185deg, rgba(25, 30, 41, 0.85) 0%, rgba(18, 22, 30, 0.85) 100%) !important; }
-        .grid-fields-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px; }
-        .swiss-badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
-        .swiss-badge--admin { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.2); }
-        .swiss-badge--employee { background: rgba(240, 181, 69, 0.12); color: var(--amber); border: 1px solid rgba(240, 181, 69, 0.2); }
-        
-        .live-status-card { display: flex; align-items: center; justify-content: space-between; padding: 16px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
-        .live-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
-        .live-dot.active { background-color: #10b981; box-shadow: 0 0 10px #10b981; animation: pulse 2s infinite; }
-        .live-dot.inactive { background-color: #64748b; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
-        
-        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
-        @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
-        .chart-container { background: rgba(23, 28, 38, 0.7); padding: 24px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.06); }
-        .dashboard-filter-form { display:flex; flex-wrap:wrap; gap:16px; background: rgba(255,255,255,0.02); padding: 16px; border-radius: 12px; margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.05); }
-
-        .payslip-mini-card { background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; transition: 0.2s; }
-        .payslip-mini-card:hover { border-color: var(--emerald); background: rgba(16, 185, 129, 0.05); }
-
-        .payslip-paper { background: #ffffff; color: #111827; padding: 35px 40px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); margin-top: 15px; border: 1px solid #e5e7eb; position: relative; overflow: hidden; display: none; font-family: 'IRANSansWeb', sans-serif; }
-        .payslip-paper::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 8px; background: linear-gradient(90deg, #10b981, #3b82f6); }
-        .payslip-header { text-align: center; border-bottom: 2px dashed #d1d5db; padding-bottom: 20px; margin-bottom: 25px; }
-        .payslip-header h2 { margin: 0 0 8px 0; color: #111827; font-size: 24px; font-weight: 900; }
-        .payslip-header span { font-size: 13px; color: #6b7280; }
-        .payslip-info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; background: #f9fafb; padding: 18px; border-radius: 6px; margin-bottom: 25px; font-size: 12.5px; border: 1px solid #f3f4f6; }
-        .payslip-info-grid strong { color: #111827; font-size: 14px; display: block; margin-top: 5px;}
-        .payslip-detail-table { width: 100%; border-collapse: collapse; text-align: right; margin-bottom: 25px; }
-        .payslip-detail-table th, .payslip-detail-table td { padding: 12px 15px; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
-        .payslip-detail-table th { background: #f3f4f6; color: #374151; font-weight: bold; }
-        .payslip-detail-table td { color: #374151; }
-        .payslip-total { background: #111827; color: #fff; padding: 18px 25px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .payslip-total span { font-size: 15px; }
-        .payslip-total strong { font-size: 24px; color: #10b981; font-weight: 900; }
-        .payslip-signatures { display: flex; justify-content: space-between; padding-top: 20px; font-size: 13px; color: #6b7280; font-weight: bold; }
-
-        @media print {
-            body * { visibility: hidden !important; }
-            body.printing .print-active, body.printing .print-active * { visibility: visible !important; }
-            body.printing .print-active { position: fixed !important; left: 0 !important; top: 0 !important; width: 100vw !important; height: 100vh !important; margin: 0 !important; padding: 30px !important; background: #fff !important; color: #000 !important; box-shadow: none !important; border: none !important; z-index: 999999 !important; }
-            .payslip-total { background: #f3f4f6 !important; color: #000 !important; border: 2px solid #000 !important; box-shadow: none !important;}
-            .payslip-total strong { color: #000 !important; }
-            .no-print { display: none !important; }
-            ::-webkit-scrollbar { display: none; }
-        }
-
-        .select-search-wrapper { position: relative; width: 100%; }
-        .select-search-trigger { display: flex; align-items: center; justify-content: space-between; background-color: var(--surface-3, #1a1f2b); border: 1px solid var(--border-strong, rgba(255,255,255,0.14)); color: var(--text, #fff); padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; min-height: 42px; transition: 0.2s ease; }
-        .select-search-trigger:hover { border-color: rgba(255,255,255,0.3); }
-        .select-search-trigger::after { content: "▼"; font-size: 10px; color: var(--text-faint, #8a94a6); margin-right: 10px; transition: transform 0.2s ease; }
-        .select-search-wrapper.open { z-index: 99999; }
-        .select-search-wrapper.open .select-search-trigger { border-color: var(--indigo, #6366f1); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }
-        .select-search-wrapper.open .select-search-trigger::after { transform: rotate(180deg); }
-        .select-search-dropdown { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: #1a1f2b; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; box-shadow: 0 20px 40px rgba(0,0,0,0.8); opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; z-index: 99999; }
-        .select-search-wrapper.open .select-search-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
-        .select-search-input { margin: 8px; padding: 10px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; font-size: 13px; font-family: inherit; outline: none; transition: border-color 0.2s; }
-        .select-search-input:focus { border-color: var(--indigo, #6366f1); }
-        .select-search-options { max-height: 220px; overflow-y: auto; padding: 0 8px 8px 8px; }
-        .select-search-options::-webkit-scrollbar { width: 6px; }
-        .select-search-options::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
-        .select-search-option { padding: 10px 12px; color: #cbd5e1; font-size: 13px; cursor: pointer; border-radius: 6px; margin-bottom: 2px; transition: background 0.15s ease, color 0.15s ease; }
-        .select-search-option:hover { background: rgba(255,255,255,0.08); color: #fff; }
-        .select-search-option.selected { background: var(--indigo, #6366f1); color: #fff; font-weight: bold; }
-        .select-search-option.hidden { display: none; }
-        
-        .card { position: relative; z-index: 1; overflow: visible !important; }
-        .table-wrap { border-bottom-left-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg); }
-        .filter-form .select-search-wrapper { width: auto !important; min-width: 170px; flex: 1; }
-    </style>
 </head>
 <body>
 <div class="atmosphere"></div>
-<div class="shell">
+<div class="app-shell">
+<input type="checkbox" id="nav-toggle" class="nav-toggle-input" aria-hidden="true">
 
-    <header class="app-header">
-        <div class="container app-header__row">
-            <div class="brand">
-                <div class="brand__mark" style="background:linear-gradient(155deg, var(--amber), #c98c1d); box-shadow:0 8px 20px -8px rgba(240,181,69,.6);">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.6-3 8.4-7 9-4-.6-7-4.4-7-9V6Z"/></svg>
-                </div>
-                <div class="brand__text">
-                    <span class="brand__title">کنترل پنل مدیریت ارشد</span>
-                    <span class="brand__subtitle">سامانهٔ کارکرد شمسی</span>
-                </div>
+<aside class="sidebar">
+    <div class="sidebar__brand">
+        <div class="brand__mark" style="background:linear-gradient(155deg, var(--amber), #c98c1d); box-shadow:0 8px 20px -8px rgba(240,181,69,.6);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.6-3 8.4-7 9-4-.6-7-4.4-7-9V6Z"/></svg>
+        </div>
+        <div class="brand__text">
+            <span class="brand__title">کنترل پنل مدیریت ارشد</span>
+            <span class="brand__subtitle">سامانهٔ کارکرد شمسی</span>
+        </div>
+    </div>
+
+    <nav class="sidebar__nav">
+        <span class="sidebar__nav-label">بخش‌ها</span>
+        <a href="/?tab=dashboard" class="side-link {{if eq .CurrentTab "dashboard"}}is-active{{end}}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+            <span>داشبورد مانیتورینگ</span>
+        </a>
+        <a href="/?tab=attendance" class="side-link {{if eq .CurrentTab "attendance"}}is-active{{end}}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
+            <span>تاریخچه حضور</span>
+        </a>
+        <a href="/?tab=worklog" class="side-link {{if eq .CurrentTab "worklog"}}is-active{{end}}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1Z"/><rect x="5" y="6" width="14" height="15" rx="2"/><path d="M9 12h6M9 16h4"/></svg>
+            <span>گزارش کارکرد مدیر</span>
+        </a>
+        <a href="/?tab=management" class="side-link {{if eq .CurrentTab "management"}}is-active{{end}}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17.5" cy="8.5" r="2.6"/><path d="M15 13.5a4.6 4.6 0 0 1 5.5 4.5"/></svg>
+            <span>مدیریت و حقوق پرسنل</span>
+        </a>
+        <a href="/?tab=projects" class="side-link {{if eq .CurrentTab "projects"}}is-active{{end}}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <span>مدیریت پروژه‌ها</span>
+        </a>
+        <a href="/?tab=project_report" class="side-link {{if eq .CurrentTab "project_report"}}is-active{{end}}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9"/><path d="M11 19V5"/><path d="M18 19v-7"/><path d="M3 19h18"/></svg>
+            <span>پایش ماهانهٔ پروژه‌ها</span>
+        </a>
+        <a href="/?tab=profile" class="side-link {{if eq .CurrentTab "profile"}}is-active{{end}}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span>حساب کاربری</span>
+        </a>
+    </nav>
+
+    <div class="sidebar__footer">
+        <div class="clock-chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
+            <span class="clock-chip__time tabular" data-clock-time>--:--:--</span>
+            <span class="clock-chip__date tabular">{{.CurrentDate}}</span>
+        </div>
+        <div class="user-chip is-admin">
+            <div class="user-chip__avatar" id="header-avatar" style="overflow:hidden; padding:0; display:flex; align-items:center; justify-content:center;">
+                {{if .CurrentAvatar}}
+                <img src="{{.CurrentAvatar}}" alt="Avatar" class="dynamic-avatar" style="width:100%; height:100%; object-fit:cover;">
+                {{else}}
+                <span style="font-size: 16px;">👤</span>
+                {{end}}
             </div>
+            <span style="display:flex;flex-direction:column;line-height:1.3;">
+                <span class="user-chip__name">{{.CurrentFullName}}</span>
+                <span class="user-chip__role">مدیر ارشد سازمان</span>
+            </span>
+        </div>
+        <a href="/logout" class="btn-logout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+            خروج
+        </a>
+    </div>
+</aside>
 
-            <div class="header-meta">
-                <div class="clock-chip">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
-                    <span class="clock-chip__time tabular" data-clock-time>--:--:--</span>
-                    <span class="clock-chip__date tabular">{{.CurrentDate}}</span>
+<label for="nav-toggle" class="sidebar-backdrop" aria-hidden="true"></label>
+
+<div class="app-main">
+    <div class="topbar">
+        <label for="nav-toggle" class="topbar__burger" aria-label="باز کردن منو">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+        </label>
+        <div class="topbar__brand-mobile">
+            <div class="brand__mark" style="background:linear-gradient(155deg, var(--amber), #c98c1d);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.6-3 8.4-7 9-4-.6-7-4.4-7-9V6Z"/></svg>
+            </div>
+            <span class="topbar__title">پنل مدیریت</span>
+        </div>
+        <div class="topbar__spacer"></div>
+        <div class="header-meta">
+            <div class="clock-chip">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
+                <span class="clock-chip__time tabular" data-clock-time>--:--:--</span>
+                <span class="clock-chip__date tabular">{{.CurrentDate}}</span>
+            </div>
+            <div class="user-chip is-admin">
+                <div class="user-chip__avatar" style="overflow:hidden; padding:0; display:flex; align-items:center; justify-content:center;">
+                    {{if .CurrentAvatar}}
+                    <img src="{{.CurrentAvatar}}" alt="Avatar" class="dynamic-avatar" style="width:100%; height:100%; object-fit:cover;">
+                    {{else}}
+                    <span style="font-size: 16px;">👤</span>
+                    {{end}}
                 </div>
-                <div class="user-chip is-admin">
-                    <div class="user-chip__avatar" id="header-avatar" style="overflow:hidden; padding:0; display:flex; align-items:center; justify-content:center;">
-                        {{if .CurrentAvatar}}
-                        <img src="{{.CurrentAvatar}}" alt="Avatar" class="dynamic-avatar" style="width:100%; height:100%; object-fit:cover;">
-                        {{else}}
-                        <span style="font-size: 16px;">👤</span>
-                        {{end}}
-                    </div>
-                    <span style="display:flex;flex-direction:column;line-height:1.3;">
-                        <span class="user-chip__name">{{.CurrentFullName}}</span>
-                        <span class="user-chip__role">مدیر ارشد سازمان</span>
-                    </span>
-                </div>
-                <a href="/logout" class="btn-logout">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
-                    خروج
-                </a>
+                <span class="hidden-sm" style="display:flex;flex-direction:column;line-height:1.3;">
+                    <span class="user-chip__name">{{.CurrentFullName}}</span>
+                    <span class="user-chip__role">مدیر ارشد سازمان</span>
+                </span>
             </div>
         </div>
-        <div class="container">
-            <nav class="nav-tabs">
-                <a href="/?tab=dashboard" class="nav-tab {{if eq .CurrentTab "dashboard"}}is-active{{end}}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-                    داشبورد مانیتورینگ
-                </a>
-                <a href="/?tab=attendance" class="nav-tab {{if eq .CurrentTab "attendance"}}is-active{{end}}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
-                    تاریخچه حضور
-                </a>
-                <a href="/?tab=worklog" class="nav-tab {{if eq .CurrentTab "worklog"}}is-active{{end}}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1Z"/><rect x="5" y="6" width="14" height="15" rx="2"/><path d="M9 12h6M9 16h4"/></svg>
-                    گزارش کارکرد مدیر
-                </a>
-                <a href="/?tab=management" class="nav-tab {{if eq .CurrentTab "management"}}is-active{{end}}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17.5" cy="8.5" r="2.6"/><path d="M15 13.5a4.6 4.6 0 0 1 5.5 4.5"/></svg>
-                    مدیریت و حقوق پرسنل
-                </a>
-                <a href="/?tab=projects" class="nav-tab {{if eq .CurrentTab "projects"}}is-active{{end}}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                    مدیریت پروژه‌ها
-                </a>
-                <a href="/?tab=project_report" class="nav-tab {{if eq .CurrentTab "project_report"}}is-active{{end}}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9"/><path d="M11 19V5"/><path d="M18 19v-7"/><path d="M3 19h18"/></svg>
-                    پایش ماهانهٔ پروژه‌ها
-                </a>
-                <a href="/?tab=profile" class="nav-tab {{if eq .CurrentTab "profile"}}is-active{{end}}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    حساب کاربری
-                </a>
-            </nav>
-        </div>
-    </header>
+    </div>
 
     <main class="container page">
 
@@ -688,9 +644,26 @@
         {{end}}
 
         {{if eq .CurrentTab "management"}}
+
+        <div class="subtab-bar" role="tablist" aria-label="بخش‌های مدیریت">
+            <button type="button" class="subtab-btn is-active" data-subtab-btn="staff">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                پرسنل سازمان
+            </button>
+            <button type="button" class="subtab-btn" data-subtab-btn="payroll">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+                حقوق و دستمزد
+            </button>
+            <button type="button" class="subtab-btn" data-subtab-btn="system">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                سیستم و پشتیبان‌گیری
+            </button>
+        </div>
+
         <div class="mgmt-container-grid">
             <div class="stack">
                 
+                <div data-subtab-panel="payroll">
                 <div class="swiss-card" style="border-left: 4px solid var(--emerald);">
                     <div class="swiss-card__title-bar">
                         <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--emerald);"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -809,7 +782,9 @@
                     </div>
                     {{end}}
                 </div>
+                </div><!-- /payroll -->
 
+                <div data-subtab-panel="staff">
                 <div class="swiss-card">
                     <div class="swiss-card__title-bar">
                         <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -971,9 +946,11 @@
                         </div>
                     </form>
                 </div>
+                </div><!-- /staff -->
             </div>
 
             <div class="stack">
+                <div data-subtab-panel="system">
                 <div class="swiss-card" style="border-top: 4px solid #3b82f6;">
                     <div class="swiss-card__title-bar">
                         <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #3b82f6;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -989,7 +966,9 @@
                         </button>
                     </form>
                 </div>
+                </div><!-- /system -->
 
+                <div data-subtab-panel="payroll">
                 <div class="swiss-card" style="border-left: 4px solid var(--amber);">
                     <div class="swiss-card__title-bar">
                         <svg class="swiss-card__icon" style="color: #6366f1;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -1139,7 +1118,9 @@
                         </div>
                     {{end}}
                 </div>
+                </div><!-- /payroll -->
 
+                <div data-subtab-panel="staff">
                 <div class="swiss-card">
                     <div class="swiss-card__title-bar">
                         <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -1212,6 +1193,7 @@
                         <button type="submit" class="btn btn-soft" style="width: 100%; justify-content: center; padding: 11px 0; font-weight: bold;">بروزرسانی ریشه‌ای مشخصات پرسنل</button>
                     </form>
                 </div>
+                </div><!-- /staff -->
             </div>
         </div>
         {{end}}
@@ -1438,7 +1420,8 @@
         {{end}}
 
     </main>
-</div>
+</div><!-- /.app-main -->
+</div><!-- /.app-shell -->
 
 <script>
     function togglePayslip(id) {
@@ -1696,6 +1679,26 @@
     }
 </script>
 
+<script>
+    // ناوبری محلی زیربخش‌های «مدیریت و حقوق پرسنل» — کاملاً سمت کاربر، بدون نیاز به تغییر بک‌اند
+    document.addEventListener('DOMContentLoaded', function() {
+        var subtabBtns = document.querySelectorAll('[data-subtab-btn]');
+        var subtabPanels = document.querySelectorAll('[data-subtab-panel]');
+        if (!subtabBtns.length) return;
+
+        function activate(target) {
+            subtabBtns.forEach(function(b) { b.classList.toggle('is-active', b.getAttribute('data-subtab-btn') === target); });
+            subtabPanels.forEach(function(p) { p.classList.toggle('is-subtab-hidden', p.getAttribute('data-subtab-panel') !== target); });
+        }
+
+        subtabBtns.forEach(function(btn) {
+            btn.addEventListener('click', function() { activate(btn.getAttribute('data-subtab-btn')); });
+        });
+
+        // اگر لینک «تنظیم پروفایل حقوقی» با #financial-form باز شده، زیربخش «پرسنل» را نمایش بده
+        activate(window.location.hash === '#financial-form' ? 'staff' : 'staff');
+    });
+</script>
 <script src="/static/js/app.js"></script>
 </body>
 </html>
