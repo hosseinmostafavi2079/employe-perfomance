@@ -46,7 +46,7 @@ func CreateTables() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// ۱. ایجاد جداول پایه و جداول حقوق و دستمزد در صورت عدم وجود
+	// ایجاد جداول پایه، حقوق، و جدول جدید بیومتریک
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS employees (
 			id SERIAL PRIMARY KEY,
@@ -115,6 +115,18 @@ func CreateTables() {
 			net_payout BIGINT NOT NULL,
 			created_at TIMESTAMPTZ DEFAULT NOW()
 		);`,
+
+		// 🚨 جدول جدید اختصاصی برای سنسورهای اثر انگشت و چهره (بدون دست‌خوردگی به دیتای قبلی)
+		`CREATE TABLE IF NOT EXISTS user_biometrics (
+			id SERIAL PRIMARY KEY,
+			employee_code VARCHAR(50) NOT NULL REFERENCES employees(employee_code) ON DELETE CASCADE,
+			credential_id BYTEA NOT NULL UNIQUE,
+			public_key BYTEA NOT NULL,
+			attestation_type VARCHAR(255),
+			sign_count BIGINT DEFAULT 0,
+			aaguid BYTEA,
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		);`,
 	}
 
 	for _, query := range queries {
@@ -124,21 +136,18 @@ func CreateTables() {
 		}
 	}
 
-	// خواندن اطلاعات ادمین از متغیرهای محیطی برای امنیت بالا (در صورت عدم وجود، از مقدار دیفالت امن استفاده می‌شود)
 	adminUser := os.Getenv("INITIAL_ADMIN_USER")
 	if adminUser == "" {
-		adminUser = "SUPER_ADMIN" // مقدار پیش‌فرض جایگزین ADMIN
+		adminUser = "SUPER_ADMIN"
 	}
 
 	adminPass := os.Getenv("INITIAL_ADMIN_PASS")
 	if adminPass == "" {
-		adminPass = "shamsi_admin_password" // یک پسورد موقت و قوی دیفالت
+		adminPass = "shamsi_admin_password"
 	}
 
-	// ایجاد هش امن فقط برای کاربر ادمین ارشد
 	adminHash, _ := bcrypt.GenerateFromPassword([]byte(adminPass), bcrypt.DefaultCost)
 
-	// ۲. تزریق و آپدیت کاربر ادمین اصلی (بخش مربوط به کارمند کاملاً حذف شده است)
 	seedQuery := `
 		INSERT INTO employees (employee_code, full_name, password, role)
 		VALUES ($1, $2, $3, 'ADMIN')

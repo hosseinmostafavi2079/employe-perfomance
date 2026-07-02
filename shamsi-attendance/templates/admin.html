@@ -4,53 +4,89 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>کنترل پنل مدیریت ارشد سازمان</title>
+    
     <link rel="stylesheet" href="/static/css/jalali-datepicker.min.css">
     <link rel="stylesheet" href="/static/css/theme.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
         .mgmt-container-grid { display: grid; grid-template-columns: 1fr; gap: 24px; align-items: start; }
         @media (min-width: 1100px) { .mgmt-container-grid { grid-template-columns: 1.4fr 1fr; } }
-        .swiss-card { background: rgba(23, 28, 38, 0.7); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 14px; backdrop-filter: blur(20px); padding: 24px; margin-bottom: 24px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        .swiss-card { background: rgba(23, 28, 38, 0.7); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 14px; backdrop-filter: blur(20px); padding: 24px; margin-bottom: 24px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; z-index: 1; }
         .swiss-card:hover { border-color: rgba(255, 255, 255, 0.12); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2); }
         .swiss-card__title-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
         .swiss-card__title { font-size: 16px; font-weight: 700; color: #ffffff; }
         .swiss-card__icon { width: 20px; height: 20px; color: var(--amber); }
+        
         .financial-highlight { border: 1px solid rgba(240, 181, 69, 0.25) !important; background: linear-gradient(185deg, rgba(25, 30, 41, 0.85) 0%, rgba(18, 22, 30, 0.85) 100%) !important; }
         .grid-fields-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 16px; }
         .swiss-badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
         .swiss-badge--admin { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.2); }
         .swiss-badge--employee { background: rgba(240, 181, 69, 0.12); color: var(--amber); border: 1px solid rgba(240, 181, 69, 0.2); }
-        .action-row-btn { display: flex; justify-content: flex-end; margin-top: 20px; }
-        .payslip-receipt-box { display: none; background: #ffffff; color: #1a1f2b; border-radius: 16px; padding: 32px; margin-bottom: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); border: 1px solid #e2e8f0; }
-        .payslip-header-mesh { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 18px; margin-bottom: 20px; }
-        .payslip-title { font-size: 20px; font-weight: 800; color: #0f172a; }
-        .payslip-meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; background: #f8fafc; padding: 14px; border-radius: 8px; font-size: 13px; margin-bottom: 22px; border: 1px solid #e2e8f0; }
-        .payslip-columns-twin { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
-        .payslip-table-mini { width: 100%; border-collapse: collapse; }
-        .payslip-table-mini th { background: #f1f5f9; color: #475569; text-align: right; padding: 8px 12px; font-size: 13px; font-weight: 700; border-radius: 4px; }
-        .payslip-table-mini td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
-        .payslip-total-block { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 18px 24px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 700; }
-        .payslip-total-price { font-size: 22px; color: #38bdf8; font-weight: 800; }
-        .payslip-footer-signatures { display: flex; justify-content: space-between; margin-top: 35px; padding-top: 15px; font-size: 12px; color: #64748b; }
-        .payslip-seal-placeholder { border: 1px dashed #cbd5e1; padding: 15px 35px; border-radius: 6px; font-style: italic; }
         
         .live-status-card { display: flex; align-items: center; justify-content: space-between; padding: 16px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
         .live-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
         .live-dot.active { background-color: #10b981; box-shadow: 0 0 10px #10b981; animation: pulse 2s infinite; }
         .live-dot.inactive { background-color: #64748b; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+        
         .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; }
         @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
         .chart-container { background: rgba(23, 28, 38, 0.7); padding: 24px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.06); }
         .dashboard-filter-form { display:flex; flex-wrap:wrap; gap:16px; background: rgba(255,255,255,0.02); padding: 16px; border-radius: 12px; margin-bottom: 24px; border: 1px solid rgba(255,255,255,0.05); }
 
+        .payslip-mini-card { background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; transition: 0.2s; }
+        .payslip-mini-card:hover { border-color: var(--emerald); background: rgba(16, 185, 129, 0.05); }
+
+        .payslip-paper { background: #ffffff; color: #111827; padding: 35px 40px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); margin-top: 15px; border: 1px solid #e5e7eb; position: relative; overflow: hidden; display: none; font-family: 'IRANSansWeb', sans-serif; }
+        .payslip-paper::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 8px; background: linear-gradient(90deg, #10b981, #3b82f6); }
+        .payslip-header { text-align: center; border-bottom: 2px dashed #d1d5db; padding-bottom: 20px; margin-bottom: 25px; }
+        .payslip-header h2 { margin: 0 0 8px 0; color: #111827; font-size: 24px; font-weight: 900; }
+        .payslip-header span { font-size: 13px; color: #6b7280; }
+        .payslip-info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; background: #f9fafb; padding: 18px; border-radius: 6px; margin-bottom: 25px; font-size: 12.5px; border: 1px solid #f3f4f6; }
+        .payslip-info-grid strong { color: #111827; font-size: 14px; display: block; margin-top: 5px;}
+        .payslip-detail-table { width: 100%; border-collapse: collapse; text-align: right; margin-bottom: 25px; }
+        .payslip-detail-table th, .payslip-detail-table td { padding: 12px 15px; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
+        .payslip-detail-table th { background: #f3f4f6; color: #374151; font-weight: bold; }
+        .payslip-detail-table td { color: #374151; }
+        .payslip-total { background: #111827; color: #fff; padding: 18px 25px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .payslip-total span { font-size: 15px; }
+        .payslip-total strong { font-size: 24px; color: #10b981; font-weight: 900; }
+        .payslip-signatures { display: flex; justify-content: space-between; padding-top: 20px; font-size: 13px; color: #6b7280; font-weight: bold; }
+
         @media print {
-            body { background: white !important; color: black !important; }
-            .atmosphere, .shell > header, .shell > main > *:not(#professional-payslip-modal), .no-print, .alert { display: none !important; }
-            #professional-payslip-modal { display: block !important; position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; padding: 0 !important; border: none !important; }
-            .payslip-total-block { background: #f1f5f9 !important; color: #000000 !important; border: 2px solid #000000; }
-            .payslip-total-price { color: #000000 !important; }
+            body * { visibility: hidden !important; }
+            body.printing .print-active, body.printing .print-active * { visibility: visible !important; }
+            body.printing .print-active { position: fixed !important; left: 0 !important; top: 0 !important; width: 100vw !important; height: 100vh !important; margin: 0 !important; padding: 30px !important; background: #fff !important; color: #000 !important; box-shadow: none !important; border: none !important; z-index: 999999 !important; }
+            .payslip-total { background: #f3f4f6 !important; color: #000 !important; border: 2px solid #000 !important; box-shadow: none !important;}
+            .payslip-total strong { color: #000 !important; }
+            .no-print { display: none !important; }
+            ::-webkit-scrollbar { display: none; }
         }
+
+        .select-search-wrapper { position: relative; width: 100%; }
+        .select-search-trigger { display: flex; align-items: center; justify-content: space-between; background-color: var(--surface-3, #1a1f2b); border: 1px solid var(--border-strong, rgba(255,255,255,0.14)); color: var(--text, #fff); padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; min-height: 42px; transition: 0.2s ease; }
+        .select-search-trigger:hover { border-color: rgba(255,255,255,0.3); }
+        .select-search-trigger::after { content: "▼"; font-size: 10px; color: var(--text-faint, #8a94a6); margin-right: 10px; transition: transform 0.2s ease; }
+        .select-search-wrapper.open { z-index: 99999; }
+        .select-search-wrapper.open .select-search-trigger { border-color: var(--indigo, #6366f1); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }
+        .select-search-wrapper.open .select-search-trigger::after { transform: rotate(180deg); }
+        .select-search-dropdown { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: #1a1f2b; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; box-shadow: 0 20px 40px rgba(0,0,0,0.8); opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; z-index: 99999; }
+        .select-search-wrapper.open .select-search-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
+        .select-search-input { margin: 8px; padding: 10px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; font-size: 13px; font-family: inherit; outline: none; transition: border-color 0.2s; }
+        .select-search-input:focus { border-color: var(--indigo, #6366f1); }
+        .select-search-options { max-height: 220px; overflow-y: auto; padding: 0 8px 8px 8px; }
+        .select-search-options::-webkit-scrollbar { width: 6px; }
+        .select-search-options::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        .select-search-option { padding: 10px 12px; color: #cbd5e1; font-size: 13px; cursor: pointer; border-radius: 6px; margin-bottom: 2px; transition: background 0.15s ease, color 0.15s ease; }
+        .select-search-option:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .select-search-option.selected { background: var(--indigo, #6366f1); color: #fff; font-weight: bold; }
+        .select-search-option.hidden { display: none; }
+        
+        .card { position: relative; z-index: 1; overflow: visible !important; }
+        .table-wrap { border-bottom-left-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg); }
+        .filter-form .select-search-wrapper { width: auto !important; min-width: 170px; flex: 1; }
     </style>
 </head>
 <body>
@@ -76,7 +112,13 @@
                     <span class="clock-chip__date tabular">{{.CurrentDate}}</span>
                 </div>
                 <div class="user-chip is-admin">
-                    <span class="user-chip__avatar">👤</span>
+                    <div class="user-chip__avatar" id="header-avatar" style="overflow:hidden; padding:0; display:flex; align-items:center; justify-content:center;">
+                        {{if .CurrentAvatar}}
+                        <img src="{{.CurrentAvatar}}" alt="Avatar" class="dynamic-avatar" style="width:100%; height:100%; object-fit:cover;">
+                        {{else}}
+                        <span style="font-size: 16px;">👤</span>
+                        {{end}}
+                    </div>
                     <span style="display:flex;flex-direction:column;line-height:1.3;">
                         <span class="user-chip__name">{{.CurrentFullName}}</span>
                         <span class="user-chip__role">مدیر ارشد سازمان</span>
@@ -114,6 +156,10 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9"/><path d="M11 19V5"/><path d="M18 19v-7"/><path d="M3 19h18"/></svg>
                     پایش ماهانهٔ پروژه‌ها
                 </a>
+                <a href="/?tab=profile" class="nav-tab {{if eq .CurrentTab "profile"}}is-active{{end}}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    حساب کاربری
+                </a>
             </nav>
         </div>
     </header>
@@ -127,9 +173,106 @@
         </div>
         {{end}}
 
+        {{if eq .CurrentTab "profile"}}
+        <div class="layout-2">
+            <div class="stack">
+                <div class="card card__pad" style="border-top: 4px solid var(--indigo);">
+                    <div class="card__head-text" style="margin-bottom:16px;">
+                        <span class="card__title">تنظیمات حساب کاربری من</span>
+                    </div>
+                    <form action="/update-my-profile" method="POST" enctype="multipart/form-data" class="form">
+                        <input type="hidden" name="tab" value="profile">
+                        <div style="display:flex; align-items:center; gap:20px; margin-bottom: 24px;">
+                            <div style="width:80px; height:80px; border-radius:50%; overflow:hidden; border:2px solid var(--border-strong); background:#1a1f2b; display:flex; align-items:center; justify-content:center; font-size:30px; flex:none;">
+                                {{if .CurrentAvatar}}
+                                <img src="{{.CurrentAvatar}}" alt="Avatar" class="dynamic-avatar" style="width:100%; height:100%; object-fit:cover;">
+                                {{else}}
+                                👤
+                                {{end}}
+                            </div>
+                            <div style="flex:1;">
+                                <label style="display:block; margin-bottom:8px; font-size:12px; color:var(--text-faint);">تغییر تصویر پروفایل (JPG, PNG)</label>
+                                <input type="file" name="avatar_file" accept=".jpg,.jpeg,.png" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; width: 100%; border: 1px dashed rgba(255,255,255,0.2);">
+                            </div>
+                        </div>
+                        
+                        <div class="field">
+                            <label>نام و نام خانوادگی نمایش داده شده</label>
+                            <input type="text" name="full_name" value="{{.CurrentFullName}}" placeholder="نام کامل شما">
+                        </div>
+                        <div class="field">
+                            <label>کد پرسنلی (نام کاربری ورود)</label>
+                            <input type="text" value="{{.CurrentUser}}" disabled style="opacity: 0.6; cursor: not-allowed; background: rgba(0,0,0,0.2);" title="کد پرسنلی فقط توسط مدیر ارشد در پنل مدیریت قابل تغییر است">
+                        </div>
+                        <div class="field">
+                            <label>تغییر کلمه عبور (اختیاری)</label>
+                            <input type="password" name="password" placeholder="تنظیم رمز عبور جدید (خالی بگذارید تا تغییر نکند)">
+                        </div>
+                        
+                        <div style="display:flex; gap:10px; margin-top:10px;">
+                            <button type="submit" class="btn btn-primary" style="flex:1;">ذخیره تنظیمات پروفایل</button>
+                            <button type="button" class="btn btn-soft" onclick="refreshAvatars()" title="جهت پاکسازی کش مرورگر" style="width:auto;">🔄 رفرش عکس</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- 🔑 اضافه شدن کارت سنسور بیومتریک در پروفایل مدیریت -->
+                <div class="card card__pad" style="border-left: 4px solid #10b981; margin-top: 24px;">
+                    <div class="card__head-text" style="margin-bottom:16px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px;color:#10b981;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        <span class="card__title" style="color:#10b981;">تنظیمات ورود بیومتریک (سریع)</span>
+                    </div>
+                    <p style="font-size: 12px; color: var(--text-faint); margin-bottom: 15px; line-height: 1.6;">
+                        جهت سهولت در ورود به سامانه، می‌توانید دستگاه فعلی (موبایل، تبلت یا رایانه) خود را جهت شناسایی با اثر انگشت (Touch ID) یا تشخیص چهره (Face ID / Windows Hello) ثبت کنید تا نیازی به ورود رمز عبور نباشد.
+                    </p>
+                    <button type="button" class="btn btn-soft" style="width: 100%; justify-content: center; border-color: rgba(16, 185, 129, 0.4); color: #10b981; font-weight: bold;" onclick="registerBiometrics()">
+                        🛡️ اتصال اثر انگشت / تشخیص چهره به این حساب
+                    </button>
+                </div>
+            </div>
+
+            <div class="stack">
+                <div class="card card__pad" style="border-left: 4px solid var(--amber);">
+                    <div class="card__head-text" style="margin-bottom:16px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;color:var(--amber);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        <span class="card__title" style="color:var(--amber);">پرونده حقوقی و قرارداد شما</span>
+                    </div>
+                    
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 16px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div>
+                                <span style="font-size: 11px; color: var(--text-faint); display: block;">نوع قرارداد فعلی:</span>
+                                <span style="font-weight: bold; color: var(--indigo);">{{if eq .MyProfile.ContractType "REGULAR"}}رسمی (قانون کار){{else}}ساعتی (پروژه‌ای){{end}}</span>
+                            </div>
+                            <div>
+                                <span style="font-size: 11px; color: var(--text-faint); display: block;">مرخصی استحقاقی باقیمانده:</span>
+                                <span class="tabular" style="font-weight: bold; color: #10b981;">{{.MyProfile.FormattedLeave}} ساعت</span>
+                            </div>
+                            <div>
+                                <span style="font-size: 11px; color: var(--text-faint); display: block;">وضعیت تاهل و حق عائله‌مندی:</span>
+                                <span style="font-weight: bold; color: #fff;">{{if .MyProfile.IsMarried}}متاهل (مشمول حق تاهل){{else}}مجرد{{end}}</span>
+                            </div>
+                            <div>
+                                <span style="font-size: 11px; color: var(--text-faint); display: block;">تعداد فرزندان ثبت‌شده:</span>
+                                <span class="tabular" style="font-weight: bold; color: #fff;">{{.MyProfile.ChildCount}} فرزند</span>
+                            </div>
+                            <div>
+                                <span style="font-size: 11px; color: var(--text-faint); display: block;">پایه سنوات (سابقه کار):</span>
+                                <span style="font-weight: bold; color: #fff;">{{if .MyProfile.EligibleForSeniority}}مشمول (بیش از یک سال){{else}}نامشمول (کمتر از یک سال){{end}}</span>
+                            </div>
+                            <div>
+                                <span style="font-size: 11px; color: var(--text-faint); display: block;">شماره شبا ثبتی:</span>
+                                <span class="tabular" style="font-weight: bold; color: #fff; font-size: 11px;">IR{{.MyProfile.ShebaNumber}}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {{end}}
+
         {{if eq .CurrentTab "dashboard"}}
         <div class="stack">
-            
             <div class="swiss-card" style="border-left: 4px solid #10b981; padding: 20px;">
                 <div class="swiss-card__title-bar" style="margin-bottom: 16px; padding-bottom: 8px;">
                     <span class="swiss-card__title">وضعیت زنده افراد حاضر (مدیران و پرسنل)</span>
@@ -138,7 +281,16 @@
                     {{range .LiveStatuses}}
                     <div class="live-status-card">
                         <div style="display: flex; align-items: center; gap: 12px;">
-                            <span class="live-dot {{if .IsPresent}}active{{else}}inactive{{end}}"></span>
+                            <div style="position:relative;">
+                                <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; border:2px solid {{if .IsPresent}}#10b981{{else}}#64748b{{end}};">
+                                    {{if .AvatarPath}}
+                                    <img src="{{.AvatarPath}}" class="dynamic-avatar" alt="{{.FullName}}" style="width:100%; height:100%; object-fit:cover;">
+                                    {{else}}
+                                    <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#1a1f2b; font-size:20px;">👤</div>
+                                    {{end}}
+                                </div>
+                                <span class="live-dot {{if .IsPresent}}active{{else}}inactive{{end}}" style="position:absolute; bottom:0; right:-2px; border:2px solid #1a1f2b;"></span>
+                            </div>
                             <div>
                                 <div style="font-weight: 700; color: #fff; font-size: 14px;">{{.FullName}}</div>
                                 <div style="font-size: 11px; color: #8a94a6;" class="tabular">{{.EmployeeCode}}</div>
@@ -161,7 +313,7 @@
                     <select name="filter_employee" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 6px;">
                         <option value="">میانگین کل سازمان (بدون شخص خاص)</option>
                         {{range .Employees}}
-                        <option value="{{.EmployeeCode}}" {{if eq $.SelectedFilter .EmployeeCode}}selected{{end}}>{{.FullName}} ({{.EmployeeCode}})</option>
+                        <option value="{{.EmployeeCode}}" {{if eq $.SelectedFilter .EmployeeCode}}selected{{end}}>{{.FullName}}</option>
                         {{end}}
                     </select>
                 </div>
@@ -245,63 +397,8 @@
                 </div>
             </div>
             {{end}}
-
         </div>
         {{end}}
-
-        <div class="payslip-receipt-box" id="professional-payslip-modal">
-            <div class="payslip-header-mesh">
-                <div>
-                    <div class="payslip-title">فیش رسمی حقوق و دستمزد پرسنل</div>
-                    <span style="font-size: 11px; color:#64748b;">سامانه مدیریت منابع انسانی و کارکرد شمسی - مصوب سال ۱۴۰۵</span>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <button id="btn-toggle-payslip-type" class="btn btn-soft no-print" style="width: auto; padding: 6px 12px; font-size: 12px; background: #e2e8f0; color: #475569; font-weight: bold;">
-                        🔄 تغییر قالب (رسمی / ساعتی)
-                    </button>
-                    <button onclick="window.print()" class="btn btn-soft no-print" style="width: auto; padding: 6px 16px; background: #f1f5f9; color: #0f172a; font-weight: bold;">
-                        🖨️ چاپ فیش
-                    </button>
-                </div>
-            </div>
-            <div class="payslip-meta-grid">
-                <div class="payslip-meta-item">نام کارمند: <b id="payslip-emp-name">--</b></div>
-                <div class="payslip-meta-item">دوره مالی: <b id="payslip-month">جاری</b> ۱۴۰۵</div>
-                <div class="payslip-meta-item">وضعیت پرداخت: <span style="color:#10b981; font-weight: bold;">✓ تایید نهایی</span></div>
-            </div>
-            <div class="payslip-columns-twin">
-                <div>
-                    <table class="payslip-table-mini">
-                        <thead><tr><th colspan="2">شرح حقوق، مزایا و تجلیل‌ها</th></tr></thead>
-                        <tbody>
-                            <tr id="row-base-salary"><td id="lbl-base-salary">حقوق پایه و کارکرد ماهانه دوره</td><td style="text-align: left;" class="tabular" id="val-base-salary">مبنای قانون کار</td></tr>
-                            <tr class="regular-only"><td>بن کارگری و اقلام مصرفی</td><td style="text-align: left;" class="tabular">۱۴,۰۰۰,۰۰۰ ریال</td></tr>
-                            <tr class="regular-only"><td>حق مسکن و کمک هزینه رفاهی</td><td style="text-align: left;" class="tabular">۹,۰۰,۰۰۰ ریال</td></tr>
-                            <tr class="regular-only"><td>حق اولاد و عائله‌مندی مشمولین</td><td style="text-align: left;" class="tabular">طبق ضوابط ساختار</td></tr>
-                            <tr><td>پاداش اضافه‌کاری و بهره‌وری ویژه</td><td style="text-align: left;" class="tabular">محاسبه زنده سیستم</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div>
-                    <table class="payslip-table-mini">
-                        <thead><tr><th colspan="2">کسورات قانونی و انضباطی</th></tr></thead>
-                        <tbody>
-                            <tr><td>حق بیمه تامین اجتماعی (سهم کارگر ۷٪)</td><td style="text-align: left; color: #ef4444;" class="tabular">کسر سیستمی</td></tr>
-                            <tr><td>مالیات بر درآمد حقوق ماهانه</td><td style="text-align: left; color: #ef4444;" class="tabular">معاف/مشمول قانونی</td></tr>
-                            <tr class="regular-only"><td>کسری تاخیر، تعجیل یا غیبت دوره</td><td style="text-align: left; color: #ef4444;" class="tabular">محاسبه بر مبنای مرخصی</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="payslip-total-block">
-                <span>خالص دریافتی نهایی کارمند (شامل تمام مزایا و کسورات):</span>
-                <span class="payslip-total-price tabular" id="payslip-net-salary">0 ریال</span>
-            </div>
-            <div class="payslip-footer-signatures">
-                <div>امضا و تایید دریافت کننده (کارمند)</div>
-                <div class="payslip-seal-placeholder">مهر و امضای امور مالی واحد پرسنلی</div>
-            </div>
-        </div>
 
         {{if eq .CurrentTab "attendance"}}
         <div class="layout-2 mobile-actions-first">
@@ -314,7 +411,7 @@
                         </div>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-left: auto; margin-right: 15px;">
                             <span style="background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 6px; font-size: 11px; border: 1px solid rgba(255,255,255,0.1);">
-                                حضور کل ماه: <b style="color: var(--amber);" class="tabular">{{.TotalHoursFormatted}}</b> ساعت
+                                حضور کل ماه: <b style="color: var(--amber);" class="tabular">{{.TotalAttendanceMonthStr}}</b>
                             </span>
                         </div>
                         <form action="/" method="GET" class="filter-form">
@@ -322,7 +419,7 @@
                             <select name="filter_employee">
                                 <option value="">همهٔ کارکنان سازمان</option>
                                 {{range .Employees}}
-                                <option value="{{.EmployeeCode}}" {{if eq $.SelectedFilter .EmployeeCode}}selected{{end}}>{{.FullName}} ({{.EmployeeCode}})</option>
+                                <option value="{{.EmployeeCode}}" {{if eq $.SelectedFilter .EmployeeCode}}selected{{end}}>{{.FullName}}</option>
                                 {{end}}
                             </select>
                             <select name="filter_month">
@@ -346,12 +443,12 @@
                     <div class="table-wrap">
                         <table class="dt">
                             <thead>
-                                <tr><th>نیرو</th><th>تاریخ</th><th>ورود</th><th>خروج</th><th>مدت حضور</th><th style="text-align:center;">عملیات</th></tr>
+                                <tr><th>نام پرسنل</th><th>تاریخ</th><th>ورود</th><th>خروج</th><th>مدت حضور</th><th style="text-align:center;">عملیات</th></tr>
                             </thead>
                             <tbody>
                                 {{range .AttendanceLogs}}
                                 <tr>
-                                    <td data-label="نیرو" class="cell-strong">{{.EmployeeCode}}</td>
+                                    <td data-label="نام پرسنل" class="cell-strong">{{.EmployeeName}} <span class="text-faint tabular" style="font-size:10px;">({{.EmployeeCode}})</span></td>
                                     <td data-label="تاریخ" class="tabular text-faint">{{.ShamsiDate}}</td>
                                     <td data-label="ورود"><span class="tag tag-in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg><span class="tabular">{{.CheckIn}}</span></span></td>
                                     <td data-label="خروج">
@@ -415,8 +512,12 @@
                         <input type="hidden" name="tab" value="attendance">
                         <input type="hidden" name="attendance_id" value="{{.EditAttendanceLog.ID}}">
                         <div class="field">
-                            <label>کد پرسنلی کارمند هدف</label>
-                            <input type="text" name="target_employee" value="{{.EditAttendanceLog.EmployeeCode}}" required>
+                            <label>انتخاب پرسنل هدف</label>
+                            <select name="target_employee" required>
+                                {{range .Employees}}
+                                <option value="{{.EmployeeCode}}" {{if eq $.EditAttendanceLog.EmployeeCode .EmployeeCode}}selected{{end}}>{{.FullName}}</option>
+                                {{end}}
+                            </select>
                         </div>
                         <div class="field">
                             <label>تاریخ روز مورد نظر (شمسی)</label>
@@ -443,8 +544,13 @@
                     <form action="/manual-attendance" method="POST" class="form">
                         <input type="hidden" name="tab" value="attendance">
                         <div class="field">
-                            <label>کد پرسنلی کارمند هدف</label>
-                            <input type="text" name="target_employee" placeholder="مثلاً EMP-1001" required>
+                            <label>انتخاب پرسنل هدف</label>
+                            <select name="target_employee" required>
+                                <option value="">جستجو و انتخاب پرسنل...</option>
+                                {{range .Employees}}
+                                <option value="{{.EmployeeCode}}">{{.FullName}}</option>
+                                {{end}}
+                            </select>
                         </div>
                         <div class="field">
                             <label>تاریخ روز جا افتاده (شمسی)</label>
@@ -584,6 +690,126 @@
         {{if eq .CurrentTab "management"}}
         <div class="mgmt-container-grid">
             <div class="stack">
+                
+                <div class="swiss-card" style="border-left: 4px solid var(--emerald);">
+                    <div class="swiss-card__title-bar">
+                        <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--emerald);"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        <span class="swiss-card__title">تنظیمات پایه حقوق و دستمزد سالانه</span>
+                    </div>
+                    <p style="font-size: 11.5px; color: var(--text-faint); margin-top: -10px; margin-bottom: 15px;">
+                        تعریف مقادیر پایه و مزایا به صورت سالانه. موتور محاسبه‌گر به طور خودکار از این مقادیر برای صدور فیش‌ها استفاده می‌کند.
+                    </p>
+                    <form action="/admin/save-payroll-constants" method="POST" class="form">
+                        <div class="grid-fields-2">
+                            <div class="field">
+                                <label>سال شمسی هدف</label>
+                                <input type="number" name="year" placeholder="مثلاً 1405" required class="tabular" value="1405" style="border-color: rgba(16, 185, 129, 0.4);">
+                            </div>
+                            <div class="field">
+                                <label>پایه حقوق روزانه (ریال)</label>
+                                <input type="number" name="daily_base_wage" placeholder="مثلاً 5541850" required class="tabular">
+                            </div>
+                        </div>
+                        <div class="grid-fields-2">
+                            <div class="field">
+                                <label>بن کارگری ماهانه (ریال)</label>
+                                <input type="number" name="monthly_bon" placeholder="مثلاً 22000000" required class="tabular">
+                            </div>
+                            <div class="field">
+                                <label>حق مسکن ماهانه (ریال)</label>
+                                <input type="number" name="monthly_housing" placeholder="مثلاً 30000000" required class="tabular">
+                            </div>
+                        </div>
+                        <div class="grid-fields-2">
+                            <div class="field">
+                                <label>حق تاهل ماهانه (ریال)</label>
+                                <input type="number" name="monthly_marital" placeholder="مثلاً 5000000" required class="tabular">
+                            </div>
+                            <div class="field">
+                                <label>حق اولاد به ازای ۱ فرزند (ریال)</label>
+                                <input type="number" name="monthly_child" placeholder="مثلاً 16625550" required class="tabular">
+                            </div>
+                        </div>
+                        <div class="grid-fields-2">
+                            <div class="field">
+                                <label>پایه سنوات روزانه (ریال)</label>
+                                <input type="number" name="daily_seniority" placeholder="مثلاً 166667" required class="tabular">
+                            </div>
+                            <div class="field">
+                                <label>مرخصی استحقاقی ماهانه (ساعت)</label>
+                                <input type="number" step="0.1" name="monthly_leave_accrual" placeholder="مثلاً 20.0" required class="tabular">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="justify-content: center; font-weight: bold; background: linear-gradient(155deg, var(--emerald), #059669); box-shadow: 0 10px 22px -12px rgba(16, 185, 129, 0.85);">ذخیره تنظیمات سالانه</button>
+                    </form>
+                    
+                    {{if .PayrollConstants}}
+                    <div style="margin-top: 16px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 12px; max-height: 200px; overflow-y: auto;">
+                        <span style="font-size: 11px; color: var(--text-faint); margin-bottom: 8px; display: block;">لیست مقادیر تنظیم شده:</span>
+                        <table class="payslip-table-mini" style="background: transparent;">
+                            <thead>
+                                <tr>
+                                    <th style="background: rgba(255,255,255,0.05); color:#fff; text-align:right;">سال</th>
+                                    <th style="background: rgba(255,255,255,0.05); color:#fff; text-align:right;">پایه روزانه</th>
+                                    <th style="background: rgba(255,255,255,0.05); color:#fff; text-align:right;">بن</th>
+                                    <th style="background: rgba(255,255,255,0.05); color:#fff; text-align:right;">مسکن</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{range .PayrollConstants}}
+                                <tr>
+                                    <td style="color:#10b981; font-weight:bold; border-bottom: 1px solid rgba(255,255,255,0.05);" class="tabular">{{.Year}}</td>
+                                    <td style="color:#cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.05);" class="tabular">{{.DailyBaseWage}}</td>
+                                    <td style="color:#cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.05);" class="tabular">{{.MonthlyBon}}</td>
+                                    <td style="color:#cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.05);" class="tabular">{{.MonthlyHousing}}</td>
+                                </tr>
+                                {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+                    {{end}}
+                </div>
+                
+                <div class="swiss-card">
+                    <div class="swiss-card__title-bar">
+                        <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        <span class="swiss-card__title">تقویم سازمانی: تعریف ساعات موظفی ماه‌ها</span>
+                    </div>
+                    <form action="/admin/set-expected-hours" method="POST" class="form">
+                        <div class="grid-fields-2">
+                            <div class="field">
+                                <label>سال شمسی</label>
+                                <input type="number" name="year" value="1405" required class="tabular">
+                            </div>
+                            <div class="field">
+                                <label>انتخاب ماه</label>
+                                <select name="month" style="background-color: #1a1f2b;">
+                                    <option value="1">فروردین</option><option value="2">اردیبهشت</option><option value="3">خرداد</option>
+                                    <option value="4">تیر</option><option value="5">مرداد</option><option value="6">شهریور</option>
+                                    <option value="7">مهر</option><option value="8">آبان</option><option value="9">آذر</option>
+                                    <option value="10">دی</option><option value="11">بهمن</option><option value="12">اسفند</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>ساعات کاری موظفی در این ماه</label>
+                                <input type="text" name="expected_hours" placeholder="مثلاً 183:30" required class="tabular" dir="ltr">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-soft" style="justify-content: center; font-weight: bold;">ثبت در تقویم سیستم</button>
+                    </form>
+                    
+                    {{if .ExpectedHoursList}}
+                    <div style="margin-top: 16px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 12px;">
+                        <span style="font-size: 11px; color: var(--text-faint); margin-bottom: 8px; display: block;">آخرین ساعات موظفی ثبت شده در سیستم:</span>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            {{range .ExpectedHoursList}}
+                            <span class="swiss-badge" style="background: rgba(255,255,255,0.05); color:#cdd6f4;">سال {{.Year}} / {{.MonthName}} : <b class="tabular" style="color:var(--emerald);">{{.ExpectedHours}}</b> ساعت</span>
+                            {{end}}
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+
                 <div class="swiss-card">
                     <div class="swiss-card__title-bar">
                         <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -594,7 +820,6 @@
                         <table class="dt" id="global-employees-table">
                             <thead>
                                 <tr>
-                                    <th>کد نیرو</th>
                                     <th>نام پرسنل</th>
                                     <th>نقش دسترسی</th>
                                     <th style="text-align:center;">عملیات مدیریت شهریه و حقوق</th>
@@ -603,8 +828,7 @@
                             <tbody>
                                 {{range .Employees}}
                                 <tr>
-                                    <td class="cell-strong tabular target-code-cell">{{.EmployeeCode}}</td>
-                                    <td class="cell-strong target-name-cell">{{.FullName}}</td>
+                                    <td class="cell-strong target-name-cell">{{.FullName}} <span class="tabular text-faint target-code-cell" style="font-size:10px;">({{.EmployeeCode}})</span></td>
                                     <td>
                                         {{if eq .Role "ADMIN"}}
                                         <span class="swiss-badge swiss-badge--admin">مدیر سیستم</span>
@@ -636,12 +860,41 @@
                         <svg class="swiss-card__icon" style="color: #f0b545;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
                         <span class="swiss-card__title">تنظیم پروفایل حقوق و حساب بانکی پرسنل</span>
                     </div>
+
+                    {{if .SelectedProfile}}
+                    <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(240,181,69,0.3); border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                        <h4 style="margin-top: 0; margin-bottom: 12px; font-size: 13px; color: #f0b545;">خلاصه وضعیت فعلی نیروی انتخاب شده: ({{.SelectedProfile.EmployeeCode}})</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                            <div>
+                                <span style="font-size: 11px; color: var(--text-faint); display: block;">نوع قرارداد:</span>
+                                <span style="font-weight: bold; color: #fff;">{{if eq .SelectedProfile.ContractType "REGULAR"}}رسمی قانون کار{{else}}ساعتی / توافقی{{end}}</span>
+                            </div>
+                            <div>
+                                <span style="font-size: 11px; color: var(--text-faint); display: block;">وضعیت تاهل / اولاد:</span>
+                                <span style="font-weight: bold; color: #fff;">{{if .SelectedProfile.IsMarried}}متاهل{{else}}مجرد{{end}} - {{.SelectedProfile.ChildCount}} فرزند</span>
+                            </div>
+                            <div>
+                                <span style="font-size: 11px; color: var(--text-faint); display: block;">مرخصی باقیمانده:</span>
+                                <span class="tabular" style="font-weight: bold; color: #10b981;">{{.SelectedProfile.FormattedLeave}} ساعت</span>
+                            </div>
+                            <div>
+                                <span style="font-size: 11px; color: var(--text-faint); display: block;">پایه سنوات:</span>
+                                <span style="font-weight: bold; color: #fff;">{{if .SelectedProfile.EligibleForSeniority}}مشمول{{else}}نامشمول{{end}}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {{end}}
                     
                     <form action="/admin/payroll/save-profile" method="POST" class="form" id="financial-profile-inner-form">
                         <div class="grid-fields-2">
                             <div class="field">
-                                <label>کد پرسنلی نیرو هدف</label>
-                                <input type="text" name="employee_code" value="{{if .SelectedProfile}}{{.SelectedProfile.EmployeeCode}}{{end}}" placeholder="مثلاً EMP-1001" required style="border-color: rgba(240,181,69,0.4);">
+                                <label>انتخاب پرسنل هدف</label>
+                                <select name="employee_code" required>
+                                    <option value="">جستجو و انتخاب پرسنل...</option>
+                                    {{range .Employees}}
+                                    <option value="{{.EmployeeCode}}" {{if $.SelectedProfile}}{{if eq $.SelectedProfile.EmployeeCode .EmployeeCode}}selected{{end}}{{end}}>{{.FullName}}</option>
+                                    {{end}}
+                                </select>
                             </div>
                             <div class="field">
                                 <label>نوع قرارداد و مبنای محاسبه حقوق</label>
@@ -708,8 +961,8 @@
                                 <input type="number" name="hourly_rate" value="{{if .SelectedProfile}}{{.SelectedProfile.HourlyRate}}{{else}}0{{end}}" required class="tabular">
                             </div>
                             <div class="field">
-                                <label>مانده اولیه مرخصی استحقاقی (ساعت)</label>
-                                <input type="number" step="0.1" name="remaining_leave_hours" value="{{if .SelectedProfile}}{{.SelectedProfile.RemainingLeaveHours}}{{else}}0.0{{end}}" required class="tabular">
+                                <label>اصلاح دستی مانده مرخصی (ساعت:دقیقه)</label>
+                                <input type="text" name="remaining_leave_hours" value="{{if .SelectedProfile}}{{.SelectedProfile.FormattedLeave}}{{else}}00:00{{end}}" required class="tabular" dir="ltr" placeholder="مثلاً 20:30 یا -10:00">
                             </div>
                         </div>
 
@@ -721,50 +974,175 @@
             </div>
 
             <div class="stack">
+                <div class="swiss-card" style="border-top: 4px solid #3b82f6;">
+                    <div class="swiss-card__title-bar">
+                        <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #3b82f6;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span class="swiss-card__title">سیستم پشتیبان‌گیری (Backup) دیتابیس</span>
+                    </div>
+                    <p style="font-size: 11.5px; color: var(--text-faint); margin-top: -10px; margin-bottom: 15px;">
+                        سیستم به صورت خودکار هر روز ساعت ۳ بامداد از تمامی داده‌ها، فیش‌ها و ترددها فایل پشتیبان تهیه می‌کند. 
+                        همچنین با استفاده از دکمه زیر می‌توانید همین لحظه نسخه پشتیبان دستی بگیرید. فایل بکاپ در پوشه <code>backups</code> روی سرور ذخیره می‌شود.
+                    </p>
+                    <form action="/admin/backup/manual" method="POST" class="form">
+                        <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #3b82f6, #2563eb); border: none; width: 100%; justify-content: center; font-weight: bold; box-shadow: 0 10px 22px -12px rgba(59, 130, 246, 0.85);">
+                            📥 تهیه فایل پشتیبان (هم‌اکنون)
+                        </button>
+                    </form>
+                </div>
+
                 <div class="swiss-card" style="border-left: 4px solid var(--amber);">
                     <div class="swiss-card__title-bar">
                         <svg class="swiss-card__icon" style="color: #6366f1;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                        <span class="swiss-card__title">محاسبه عملکرد و صدور آنی فیش حقوقی</span>
+                        <span class="swiss-card__title">پردازش و صدور پیش‌نویس فیش حقوقی (مبتنی بر کارکرد سامانه)</span>
                     </div>
                     
                     <form action="/admin/payroll/issue" method="POST" class="form" id="issue-payroll-form">
-                        <input type="hidden" name="year" value="1405">
-                        
-                        <div class="field">
-                            <label>کارمند هدف جهت محاسبات</label>
-                            <input type="text" name="employee_code" id="payroll-target-code-input" value="{{if .SelectedProfile}}{{.SelectedProfile.EmployeeCode}}{{end}}" placeholder="کد پرسنلی مثلاً EMP-1001" required>
+                        <div class="grid-fields-2">
+                            <div class="field">
+                                <label>سال شمسی</label>
+                                <input type="number" name="year" value="1405" required class="tabular">
+                            </div>
+                            <div class="field">
+                                <label>انتخاب ماه (بازه زمانی کارکرد)</label>
+                                <select name="month">
+                                    <option value="1">فروردین</option><option value="2">اردیبهشت</option><option value="3">خرداد</option>
+                                    <option value="4">تیر</option><option value="5">مرداد</option><option value="6">شهریور</option>
+                                    <option value="7">مهر</option><option value="8">آبان</option><option value="9">آذر</option>
+                                    <option value="10">دی</option><option value="11">بهمن</option><option value="12">اسفند</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div class="field">
-                            <label>انتخاب ماه دوره شمسی (سال ۱۴۰۵)</label>
-                            <select name="month">
-                                <option value="1">فروردین</option><option value="2">اردیبهشت</option><option value="3">خرداد</option>
-                                <option value="4">تیر</option><option value="5">مرداد</option><option value="6">شهریور</option>
-                                <option value="7">مهر</option><option value="8">آبان</option><option value="9">آذر</option>
-                                <option value="10">دی</option><option value="11">بهمن</option><option value="12">اسفند</option>
+                            <label>کارمند هدف جهت محاسبات</label>
+                            <select name="employee_code" id="payroll-target-code-input" required>
+                                <option value="">جستجو و انتخاب پرسنل...</option>
+                                {{range .Employees}}
+                                <option value="{{.EmployeeCode}}">{{.FullName}}</option>
+                                {{end}}
                             </select>
                         </div>
 
-                        <div class="grid-fields-2">
-                            <div class="field">
-                                <label>ساعت موظفی این ماه</label>
-                                <input type="text" name="expected_hours" placeholder="مثلاً 178:00" required class="tabular" dir="ltr">
-                            </div>
-                            <div class="field">
-                                <label>کل کارکرد واقعی پر شده نیرو</label>
-                                <input type="text" name="actual_hours" placeholder="مثلاً 170:30" required class="tabular" dir="ltr">
-                            </div>
+                        <div class="grid-fields-2" style="align-items: center;">
                             <div class="field">
                                 <label>ساعات اضافه‌کاری تایید شده مدیریتی</label>
-                                <input type="text" name="overtime_hours" value="00:00" required class="tabular" dir="ltr">
+                                <input type="text" name="overtime_hours" value="00:00" required class="tabular" dir="ltr" title="در صورت نداشتن اضافه کار مقدار 00:00 بماند">
                             </div>
-                        </div> <button type="submit" class="btn btn-amber" style="width: 100%; justify-content: center; font-weight: 700; padding: 12px 0; margin-top: 10px;">⚡ محاسبه و صدور فیش مالی نهایی</button>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fff; font-size: 13px; font-weight: bold; background: rgba(16, 185, 129, 0.1); padding: 12px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.3); margin-top: 18px;">
+                                <input type="checkbox" name="is_published" value="true" style="width: 18px; height: 18px; cursor: pointer;">
+                                صدور نهایی و انتشار آنی در پورتال پرسنل
+                            </label>
+                        </div> 
+                        
+                        <p style="font-size: 11px; color: var(--text-faint); margin: 0; line-height: 1.6;">
+                            سیستم کارکرد این ماه را محاسبه و با ساعات موظفی مقایسه می‌کند. <b>اگر تیک انتشار را بزنید</b>، فیش مستقیماً صادر و مرخصی کسر می‌شود. در غیر این صورت فیش به عنوان <b>پیش‌نویس</b> در آرشیو ثبت می‌گردد تا بعداً تایید کنید.
+                        </p>
+
+                        <button type="submit" class="btn btn-amber" style="width: 100%; justify-content: center; font-weight: 700; padding: 12px 0; margin-top: 5px;">⚡ پردازش فیش حقوقی</button>
                     </form>
+                </div>
+
+                <div class="swiss-card" style="border-top: 4px solid var(--indigo);">
+                    <div class="swiss-card__title-bar">
+                        <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--indigo);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        <span class="card__title" style="color:var(--indigo);">آرشیو کل فیش‌های حقوقی سازمان</span>
+                    </div>
+
+                    {{if .AllPayslips}}
+                        {{range .AllPayslips}}
+                        <div class="payslip-mini-card">
+                            <div style="display:flex; align-items:center; gap:14px;">
+                                <div style="background: rgba(99, 102, 241, 0.1); width: 40px; height: 40px; border-radius: 8px; display:flex; align-items:center; justify-content:center;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="var(--indigo)" stroke-width="2" style="width:20px; height:20px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 700; color: #fff; font-size: 13px;">{{.EmployeeName}} <span style="font-size:10px; color:#8a94a6;">({{.MonthName}} {{.Year}})</span></div>
+                                    <div style="font-size: 11px; color: var(--text-faint); margin-top: 4px;">
+                                        {{if .IsPublished}}<span style="color:#10b981; background: rgba(16, 185, 129, 0.1); padding: 2px 6px; border-radius: 4px;">✓ تایید و ارسال شده</span>{{else}}<span style="color:#f59e0b; background: rgba(245, 158, 11, 0.1); padding: 2px 6px; border-radius: 4px;">⏳ پیش‌نویس</span>{{end}} | کارکرد: <b class="tabular" style="color:#cdd6f4;">{{.ActualHours}}</b>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="text-align: left; display: flex; flex-direction: column; align-items: flex-end;">
+                                <div class="tabular" style="font-weight: 900; color: #38bdf8; font-size: 14px; margin-bottom: 8px;">{{.NetPayout}}</div>
+                                <div style="display:flex; gap:6px;">
+                                    <button type="button" class="btn btn-soft" style="padding: 4px 8px; font-size: 10px;" onclick="togglePayslip('{{.ID}}')">مشاهده</button>
+                                    {{if not .IsPublished}}
+                                        <a href="/admin/payroll/finalize?id={{.ID}}" class="btn btn-primary" style="padding: 4px 8px; font-size: 10px; background:var(--emerald); border:none;" onclick="return confirm('با تایید نهایی، این فیش منتشر شده و مرخصی‌ها محاسبه و کسر می‌گردد. ادامه می‌دهید؟')">تایید نهایی</a>
+                                    {{end}}
+                                    <a href="/admin/payroll/delete-payslip?id={{.ID}}" class="btn btn-soft" style="padding: 4px 8px; font-size: 10px; color:#ef4444; border-color: rgba(239, 68, 68, 0.3);" onclick="return confirm('آیا از ابطال و حذف کامل این فیش مطمئن هستید؟')">حذف</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="payslip-paper" id="payslip-paper-{{.ID}}">
+                            <div class="payslip-header">
+                                <h2>فیش حقوقی پرسنل</h2>
+                                <span>دوره مالی: {{.MonthName}} سال {{.Year}}</span>
+                                {{if not .IsPublished}}<div style="color: #f59e0b; font-weight: bold; margin-top: 5px;">(نسخه پیش‌نویس - هنوز تایید نهایی نشده است)</div>{{end}}
+                            </div>
+                            <div class="payslip-info-grid">
+                                <div>نام پرسنل: <strong>{{.EmployeeName}}</strong></div>
+                                <div>کد پرسنلی: <strong class="tabular">{{.EmployeeCode}}</strong></div>
+                                <div>نوع قرارداد: <strong>{{if eq .ContractType "REGULAR"}}رسمی (قانون کار){{else}}ساعتی (پروژه‌ای){{end}}</strong></div>
+                                <div>ساعت موظفی سازمان: <strong class="tabular">{{.ExpectedHours}}</strong></div>
+                                <div>کارکرد واقعی تایید شده: <strong class="tabular">{{.ActualHours}}</strong></div>
+                                <div>مانده نهایی مرخصی: <strong class="tabular">{{if .IsPublished}}{{.LeaveBalance}}{{else}}محاسبه پس از تایید{{end}}</strong></div>
+                            </div>
+                            
+                            <table class="payslip-detail-table">
+                                <thead>
+                                    <tr><th>ردیف</th><th>شرح پرداخت / کسورات</th><th style="text-align:left;">مبلغ (ریال) / زمان</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>۱</td><td>حقوق پایه (ساعت کارکرد)</td><td style="text-align:left;" class="tabular">{{.BaseSalary}}</td></tr>
+                                    {{if eq .ContractType "REGULAR"}}
+                                    <tr><td>۲</td><td>بن کارگری و خواروبار</td><td style="text-align:left;" class="tabular">{{.BonAllowance}}</td></tr>
+                                    <tr><td>۳</td><td>حق مسکن</td><td style="text-align:left;" class="tabular">{{.HousingAllowance}}</td></tr>
+                                    <tr><td>۴</td><td>حق عائله‌مندی (تاهل)</td><td style="text-align:left;" class="tabular">{{.MaritalAllowance}}</td></tr>
+                                    <tr><td>۵</td><td>حق اولاد</td><td style="text-align:left;" class="tabular">{{.ChildAllowance}}</td></tr>
+                                    <tr><td>۶</td><td>پایه سنوات (تجمیعی)</td><td style="text-align:left;" class="tabular">{{.SeniorityAllowance}}</td></tr>
+                                    {{end}}
+                                    <tr><td>-</td><td>پاداش اضافه‌کاری <span style="font-size:10px;color:#6b7280;">({{.OvertimeHours}} ساعت)</span></td><td style="text-align:left;" class="tabular">{{.OvertimeIncome}}</td></tr>
+                                    
+                                    <tr style="background:#f9fafb;">
+                                        <td colspan="2"><strong>جمع ناخالص حقوق و مزایا:</strong></td>
+                                        <td style="text-align:left; color:#10b981; font-weight:bold;" class="tabular">{{.GrossEarnings}}</td>
+                                    </tr>
+
+                                    {{if eq .ContractType "REGULAR"}}
+                                    <tr><td>۷</td><td>کسورات: حق بیمه سهم کارگر (۷٪)</td><td style="text-align:left; color:#ef4444;" class="tabular">{{.InsuranceDeduction}}</td></tr>
+                                    <tr><td>۸</td><td>کسورات: کسر غیبت از مرخصی</td><td style="text-align:left; color:#ef4444;" class="tabular">{{.LeaveDeficitHours}} ساعت</td></tr>
+                                    {{end}}
+                                </tbody>
+                            </table>
+
+                            <div class="payslip-total">
+                                <span>خالص پرداختی پس از کسورات:</span>
+                                <strong class="tabular">{{.NetPayout}} ریال</strong>
+                            </div>
+
+                            <div class="payslip-signatures">
+                                <div>مهر و امضای مدیریت مالی</div>
+                                <div>امضای کارمند (تاییدیه دریافت)</div>
+                            </div>
+                            
+                            <div class="no-print" style="margin-top: 30px; display: flex; gap: 10px;">
+                                <button type="button" class="btn btn-primary" onclick="printPayslip('{{.ID}}')" style="flex: 1; justify-content: center;">🖨️ چاپ رسمی فیش</button>
+                                <button type="button" class="btn btn-soft" onclick="togglePayslip('{{.ID}}')" style="width: auto;">بستن</button>
+                            </div>
+                        </div>
+                        {{end}}
+                    {{else}}
+                        <div class="notice-block" style="padding: 30px 20px;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:40px; height:40px; stroke:var(--text-faint); margin-bottom:15px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            <p style="color:var(--text-faint); font-size:12px; line-height:1.8;">هنوز هیچ فیش حقوقی در سیستم ثبت نشده است.</p>
+                        </div>
+                    {{end}}
                 </div>
 
                 <div class="swiss-card">
                     <div class="swiss-card__title-bar">
-                        <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                        <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         <span class="swiss-card__title">استخدام و تعریف کاربر جدید در ارگان</span>
                     </div>
                     
@@ -803,8 +1181,13 @@
                     <form action="/admin/edit-employee" method="POST" class="form">
                         <input type="hidden" name="tab" value="management">
                         <div class="field">
-                            <label>کد پرسنلی فعلی هدف (جهت شناسایی در سیستم)</label>
-                            <input type="text" name="original_emp_code" placeholder="مثلاً EMP-1001" required>
+                            <label>انتخاب پرسنل فعلی (جهت شناسایی در سیستم)</label>
+                            <select name="original_emp_code" required>
+                                <option value="">جستجو و انتخاب پرسنل...</option>
+                                {{range .Employees}}
+                                <option value="{{.EmployeeCode}}">{{.FullName}}</option>
+                                {{end}}
+                            </select>
                         </div>
                         <div class="field">
                             <label>کد پرسنلی جدید (فقط در صورت نیاز به تغییر وارد کنید)</label>
@@ -871,6 +1254,66 @@
                         <button type="submit" class="btn btn-primary" style="background-color: var(--indigo);">اعمال تغییر نام</button>
                     </form>
                 </div>
+                
+                <div class="swiss-card" style="border-top: 4px solid var(--emerald); margin-top: 24px;">
+                    <div class="swiss-card__title-bar">
+                        <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--emerald);"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <span class="card__title" style="color:var(--emerald);">تخصیص سطح دسترسی پروژه‌ها</span>
+                    </div>
+                    <p style="font-size: 11.5px; color: var(--text-faint); margin-top: -10px; margin-bottom: 15px;">
+                        مدیریت وظایف پرسنل: هر شخص در پورتال خود فقط اجازه ثبت کارکرد در پروژه‌هایی را دارد که از اینجا به او تخصیص دهید.
+                    </p>
+                    
+                    <form action="/admin/assign-projects" method="POST" class="form">
+                        <div class="field">
+                            <label>۱. انتخاب پرسنل هدف</label>
+                            <select name="employee_code" required>
+                                <option value="">پرسنل مورد نظر را جستجو و انتخاب کنید...</option>
+                                {{range .Employees}}
+                                    {{if ne .Role "ADMIN"}}
+                                    <option value="{{.EmployeeCode}}">{{.FullName}} ({{.EmployeeCode}})</option>
+                                    {{end}}
+                                {{end}}
+                            </select>
+                        </div>
+                        
+                        <div class="field">
+                            <label>۲. پروژه‌های مجاز برای این فرد (تیک بزنید)</label>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; background: rgba(0,0,0,0.2); padding: 18px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); max-height: 200px; overflow-y: auto;">
+                                {{range .Projects}}
+                                <label style="display: flex; align-items: center; gap: 10px; color: #cbd5e1; cursor: pointer; font-size: 13px; background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03); transition: all 0.2s;">
+                                    <input type="checkbox" name="project_ids" value="{{.ID}}" style="width: 16px; height: 16px; accent-color: var(--emerald); cursor: pointer;">
+                                    {{.Name}}
+                                </label>
+                                {{end}}
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, var(--emerald), #059669); border: none; width: 100%; justify-content: center; font-weight: bold; margin-top: 10px;">ذخیره و اعمال دسترسی‌ها</button>
+                    </form>
+
+                    <div style="margin-top: 30px;">
+                        <h4 style="font-size: 13px; color: #fff; margin-bottom: 12px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px;">لیست دسترسی‌های فعلی سیستم:</h4>
+                        <div class="table-wrap" style="max-height: 250px; overflow-y: auto;">
+                            <table class="payslip-table-mini" style="background: transparent;">
+                                <thead>
+                                    <tr>
+                                        <th style="background: rgba(255,255,255,0.05); color:#8a94a6; text-align:right;">نام پرسنل</th>
+                                        <th style="background: rgba(255,255,255,0.05); color:#8a94a6; text-align:right;">پروژه‌های اختصاص یافته</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{range .ProjectAccessList}}
+                                    <tr>
+                                        <td style="color:#cbd5e1; border-bottom: 1px solid rgba(255,255,255,0.05);">{{.EmployeeName}} <br><span class="tabular" style="font-size:10px; color:#64748b;">({{.EmployeeCode}})</span></td>
+                                        <td style="color:#10b981; border-bottom: 1px solid rgba(255,255,255,0.05); line-height: 1.6;">{{.ProjectNames}}</td>
+                                    </tr>
+                                    {{end}}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <div class="stack">
@@ -911,7 +1354,7 @@
                         <select name="filter_employee">
                             <option value="">همهٔ کارکنان سازمان</option>
                             {{range .Employees}}
-                            <option value="{{.EmployeeCode}}" {{if eq $.SelectedFilter .EmployeeCode}}selected{{end}}>{{.FullName}} ({{.EmployeeCode}})</option>
+                            <option value="{{.EmployeeCode}}" {{if eq $.SelectedFilter .EmployeeCode}}selected{{end}}>{{.FullName}}</option>
                             {{end}}
                         </select>
                     </div>
@@ -962,12 +1405,12 @@
                 <div class="table-wrap">
                     <table class="dt">
                         <thead>
-                            <tr><th>کد نیرو</th><th>تاریخ فعالیت</th><th>پروژه</th><th>شرح اقدامات روزانه</th><th>مدت کارکرد</th><th style="text-align:center;">عملیات</th></tr>
+                            <tr><th>نام پرسنل</th><th>تاریخ فعالیت</th><th>پروژه</th><th>شرح اقدامات روزانه</th><th>مدت کارکرد</th><th style="text-align:center;">عملیات</th></tr>
                         </thead>
                         <tbody>
                             {{range .WorkLogs}}
                             <tr>
-                                <td class="cell-strong">{{.EmployeeCode}}</td>
+                                <td class="cell-strong">{{.EmployeeName}} <span class="text-faint tabular" style="font-size:10px;">({{.EmployeeCode}})</span></td>
                                 <td class="tabular text-faint">{{.ShamsiDate}}</td>
                                 <td class="cell-strong">{{.ProjectName}}</td>
                                 <td class="cell-desc">{{.Description}}</td>
@@ -997,7 +1440,29 @@
     </main>
 </div>
 
-{{if eq .CurrentTab "dashboard"}}
+<script>
+    function togglePayslip(id) {
+        const paper = document.getElementById('payslip-paper-' + id);
+        if (paper.style.display === 'none' || paper.style.display === '') {
+            paper.style.display = 'block';
+            paper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            paper.style.display = 'none';
+        }
+    }
+
+    function printPayslip(id) {
+        document.body.classList.add('printing');
+        document.querySelectorAll('.payslip-paper').forEach(el => el.classList.remove('print-active'));
+        document.getElementById('payslip-paper-' + id).classList.add('print-active');
+        
+        window.print();
+        
+        document.body.classList.remove('printing');
+        document.getElementById('payslip-paper-' + id).classList.remove('print-active');
+    }
+</script>
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const pieCtx = document.getElementById('pieChart');
@@ -1013,13 +1478,7 @@
                         hoverOffset: 4
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { position: 'right', labels: { color: '#cbd5e1', font: { family: 'IRANSansWeb' } } }
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#cbd5e1', font: { family: 'IRANSansWeb' } } } } }
             });
         }
 
@@ -1037,114 +1496,206 @@
                         barThickness: 30
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8a94a6', font: { family: 'IRANSansWeb' } } },
-                        x: { grid: { display: false }, ticks: { color: '#8a94a6', font: { family: 'IRANSansWeb' } } }
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8a94a6', font: { family: 'IRANSansWeb' } } }, x: { grid: { display: false }, ticks: { color: '#8a94a6', font: { family: 'IRANSansWeb' } } } } }
             });
         }
     });
 </script>
-{{end}}
 
 <script src="/static/js/jalali-datepicker.min.js"></script>
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        jalaliDatepicker.start({
-            showTodayBtn: true,
-            hideAfterSelect: true
-        });
+        const selects = document.querySelectorAll('select:not([multiple])');
+        selects.forEach(originalSelect => {
+            if (originalSelect.dataset.customSelect) return;
+            originalSelect.dataset.customSelect = "true";
+            originalSelect.style.display = 'none';
 
-        const activeEmpCode = "{{if .SelectedProfile}}{{.SelectedProfile.EmployeeCode}}{{end}}";
-        const activeContractType = "{{if .SelectedProfile}}{{.SelectedProfile.ContractType}}{{end}}";
-        if (activeEmpCode && activeContractType) {
-            localStorage.setItem("contract_type_" + activeEmpCode, activeContractType);
-        }
+            const wrapper = document.createElement('div');
+            wrapper.className = 'select-search-wrapper';
+            originalSelect.parentNode.insertBefore(wrapper, originalSelect);
+            wrapper.appendChild(originalSelect);
 
-        const payrollForm = document.getElementById("issue-payroll-form");
-        if (payrollForm) {
-            payrollForm.addEventListener("submit", function() {
-                const inputCode = document.getElementById("payroll-target-code-input");
-                if (inputCode && inputCode.value) {
-                    localStorage.setItem("last_processed_emp_code", inputCode.value.trim());
+            const trigger = document.createElement('div');
+            trigger.className = 'select-search-trigger';
+            const updateTriggerText = () => {
+                const selectedOpt = originalSelect.options[originalSelect.selectedIndex];
+                trigger.textContent = selectedOpt ? selectedOpt.text : 'انتخاب کنید...';
+            };
+            updateTriggerText();
+            wrapper.appendChild(trigger);
+
+            const dropdown = document.createElement('div');
+            dropdown.className = 'select-search-dropdown';
+            wrapper.appendChild(dropdown);
+
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.className = 'select-search-input';
+            searchInput.placeholder = 'جستجو...';
+            dropdown.appendChild(searchInput);
+
+            const optionsContainer = document.createElement('div');
+            optionsContainer.className = 'select-search-options';
+            dropdown.appendChild(optionsContainer);
+
+            const optionElements = [];
+            Array.from(originalSelect.options).forEach(opt => {
+                const optEl = document.createElement('div');
+                optEl.className = 'select-search-option';
+                if (opt.selected) optEl.classList.add('selected');
+                optEl.textContent = opt.text;
+                
+                optionsContainer.appendChild(optEl);
+                optionElements.push({ el: optEl, text: opt.text.toLowerCase() });
+
+                optEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    originalSelect.value = opt.value;
+                    originalSelect.dispatchEvent(new Event('change'));
+                    optionElements.forEach(o => o.el.classList.remove('selected'));
+                    optEl.classList.add('selected');
+                    updateTriggerText();
+                    wrapper.classList.remove('open');
+                    
+                    const parentCard = wrapper.closest('.card, .swiss-card');
+                    if (parentCard) parentCard.style.zIndex = '1';
+                });
+            });
+
+            originalSelect.addEventListener('change', () => {
+                updateTriggerText();
+                optionElements.forEach(o => {
+                    if(o.el.textContent === originalSelect.options[originalSelect.selectedIndex]?.text) {
+                        o.el.classList.add('selected');
+                    } else {
+                        o.el.classList.remove('selected');
+                    }
+                });
+            });
+
+            trigger.addEventListener('click', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                const isOpen = wrapper.classList.contains('open');
+                
+                document.querySelectorAll('.select-search-wrapper').forEach(w => {
+                    w.classList.remove('open');
+                    const pc = w.closest('.card, .swiss-card');
+                    if(pc) pc.style.zIndex = '1';
+                });
+
+                if (!isOpen) {
+                    wrapper.classList.add('open');
+                    
+                    const parentCard = wrapper.closest('.card, .swiss-card');
+                    if (parentCard) parentCard.style.zIndex = '9999';
+
+                    searchInput.value = '';
+                    optionElements.forEach(o => o.el.classList.remove('hidden'));
+                    setTimeout(() => searchInput.focus(), 50);
                 }
             });
-        }
 
-        let currentViewMode = "REGULAR"; 
+            searchInput.addEventListener('click', e => e.stopPropagation());
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                optionElements.forEach(o => {
+                    if (o.text.includes(query)) { o.el.classList.remove('hidden'); } else { o.el.classList.add('hidden'); }
+                });
+            });
+        });
+
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.select-search-wrapper').forEach(w => {
+                w.classList.remove('open');
+                const pc = w.closest('.card, .swiss-card');
+                if(pc) pc.style.zIndex = '1';
+            });
+        });
+    });
+</script>
+
+<script>
+    window.refreshAvatars = function() {
+        const timestamp = new Date().getTime();
+        document.querySelectorAll('img.dynamic-avatar').forEach(img => {
+            const url = new URL(img.src, window.location.origin);
+            url.searchParams.set('t', timestamp);
+            img.src = url.toString();
+        });
+        alert("✅ کش تصاویر با موفقیت رفرش شد و تصویر جدید جایگزین شد.");
+    };
+
+    document.addEventListener("DOMContentLoaded", function() {
+        jalaliDatepicker.start({ showTodayBtn: true, hideAfterSelect: true });
         
-        function applyPayslipLayout(mode) {
-            const regularRows = document.querySelectorAll(".regular-only");
-            const lblBaseSalary = document.getElementById("lbl-base-salary");
-            const valBaseSalary = document.getElementById("val-base-salary");
-            
-            if (mode === "HOURLY") {
-                regularRows.forEach(el => el.style.display = "none");
-                if (lblBaseSalary) lblBaseSalary.textContent = "کارکرد و دستمزد ساعتی دوره";
-                if (valBaseSalary) valBaseSalary.textContent = "محاسبه بر اساس نرخ ساعتی توافقی";
-            } else {
-                regularRows.forEach(el => el.style.display = "table-row");
-                if (lblBaseSalary) lblBaseSalary.textContent = "حقوق پایه و کارکرد ماهانه دوره";
-                if (valBaseSalary) valBaseSalary.textContent = "مبنای قانون کار";
-            }
-        }
-
         const alertMsgEl = document.querySelector(".alert__msg");
         if (alertMsgEl) {
             const textContent = alertMsgEl.textContent || alertMsgEl.innerText;
-            if (textContent.includes("فیش حقوقی صادر شد")) {
+            if (textContent.includes("پیش‌نویس فیش صادر شد") || textContent.includes("فیش تایید نهایی شد") || textContent.includes("ابطال گردید") || textContent.includes("خالص پرداختی") || textContent.includes("عملیات موفق")) {
                 document.querySelector(".alert").style.display = "none";
-                
-                const matchedDigits = textContent.match(/\d+/);
-                let rawSalaryAmount = matchedDigits ? matchedDigits[0] : "0";
-                let formattedSalary = Number(rawSalaryAmount).toLocaleString('fa-IR') + " ریال";
-                
-                const payslipBox = document.getElementById("professional-payslip-modal");
-                if (payslipBox) {
-                    payslipBox.style.display = "block";
-                    document.getElementById("payslip-net-salary").textContent = formattedSalary;
-                    
-                    let issuedCode = localStorage.getItem("last_processed_emp_code") || "---";
-                    let resolvedEmpName = issuedCode;
-                    const employeeRows = document.querySelectorAll("#global-employees-table tbody tr");
-                    employeeRows.forEach(row => {
-                        const codeCell = row.querySelector(".target-code-cell");
-                        const nameCell = row.querySelector(".target-name-cell");
-                        if (codeCell && nameCell && codeCell.textContent.trim() === issuedCode) {
-                            resolvedEmpName = nameCell.textContent.trim();
-                        }
-                    });
-                    document.getElementById("payslip-emp-name").textContent = resolvedEmpName;
-                    
-                    const monthSelect = document.querySelector('#issue-payroll-form select[name="month"]');
-                    if (monthSelect) {
-                        document.getElementById("payslip-month").textContent = monthSelect.options[monthSelect.selectedIndex].text;
-                    }
-
-                    currentViewMode = localStorage.getItem("contract_type_" + issuedCode) || "REGULAR";
-                    applyPayslipLayout(currentViewMode);
-
-                    payslipBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
+                alert(textContent); 
             }
-        }
-
-        const toggleBtn = document.getElementById("btn-toggle-payslip-type");
-        if (toggleBtn) {
-            toggleBtn.addEventListener("click", function() {
-                let issuedCode = localStorage.getItem("last_processed_emp_code") || "generic";
-                currentViewMode = (currentViewMode === "REGULAR") ? "HOURLY" : "REGULAR";
-                localStorage.setItem("contract_type_" + issuedCode, currentViewMode);
-                applyPayslipLayout(currentViewMode);
-            });
         }
     });
 </script>
+
+<!-- 🔐 اسکریپت‌های ثبت بیومتریک Vanilla JS -->
+<script>
+    const base64urlToBuffer = (b64) => {
+        const padding = '='.repeat((4 - b64.length % 4) % 4);
+        const base64 = (b64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+        return outputArray.buffer;
+    };
+
+    const bufferToBase64url = (buffer) => {
+        const bytes = new Uint8Array(buffer);
+        let str = '';
+        for (let i = 0; i < bytes.length; i++) { str += String.fromCharCode(bytes[i]); }
+        return window.btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    };
+
+    async function registerBiometrics() {
+        try {
+            const resp = await fetch('/biometric/register/begin');
+            if (!resp.ok) throw new Error('احراز هویت سشن ناموفق بود.');
+            const options = await resp.json();
+
+            options.publicKey.challenge = base64urlToBuffer(options.publicKey.challenge);
+            options.publicKey.user.id = base64urlToBuffer(options.publicKey.user.id);
+            if (options.publicKey.excludeCredentials) {
+                options.publicKey.excludeCredentials.forEach(c => c.id = base64urlToBuffer(c.id));
+            }
+
+            const credential = await navigator.credentials.create({ publicKey: options.publicKey });
+
+            const finishResp = await fetch('/biometric/register/finish', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: credential.id,
+                    rawId: bufferToBase64url(credential.rawId),
+                    type: credential.type,
+                    response: {
+                        attestationObject: bufferToBase64url(credential.response.attestationObject),
+                        clientDataJSON: bufferToBase64url(credential.response.clientDataJSON)
+                    }
+                })
+            });
+
+            if (finishResp.ok) { alert('✅ دستگاه شما با موفقیت برای ورود بیومتریک ثبت شد.'); } 
+            else { alert('❌ خطا در ذخیره‌سازی اطلاعات در سرور.'); }
+        } catch (e) { 
+            console.error(e); 
+            alert('خطا: مرورگر یا دستگاه شما از سنسورهای بیومتریک پشتیبانی نمی‌کند یا دسترسی لازم را ندارد.'); 
+        }
+    }
+</script>
+
 <script src="/static/js/app.js"></script>
 </body>
 </html>

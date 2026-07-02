@@ -3,81 +3,147 @@ package payroll
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"shamsi_attendance/internal/database"
 )
 
-// SalaryCalculator همان قرارداد رسمی (Interface) ماست.
-// هر استراتژی محاسباتی که در آینده اضافه شود، باید این دو رفتار را پیاده‌سازی کند.
-type SalaryCalculator interface {
-	CalculateSalary(totalHours float64) float64
-	GetStrategyName() string
+// ContractType نوع قرارداد
+type ContractType string
+
+const (
+	ContractRegular ContractType = "REGULAR"
+	ContractHourly  ContractType = "HOURLY"
+)
+
+// EmployeeProfile پروفایل مالی
+type EmployeeProfile struct {
+	ID                   int          `json:"id"`
+	EmployeeCode         string       `json:"employee_code"`
+	ContractType         ContractType `json:"contract_type"`
+	IsMarried            bool         `json:"is_married"`
+	ChildCount           int          `json:"child_count"`
+	EligibleForSeniority bool         `json:"eligible_for_seniority"`
+	CustomOvertimeRate   int64        `json:"custom_overtime_rate"`
+	HourlyRate           int64        `json:"hourly_rate"`
+	RemainingLeaveHours  float64      `json:"remaining_leave_hours"`
+	CreatedAt            time.Time    `json:"created_at"`
 }
 
-// -----------------------------------------------------------------
-// ۱. استراتژی اول: حقوق استاندارد مطابق قانون کار (ماهانه ثابت با شرط ساعت موظفی)
-type LaborLawStrategy struct {
-	BaseMonthlySalary float64 // حقوق پایه مصوب قانون کار برای یک ماه
-	RequiredHours     float64 // ساعات موظفی کار در آن ماه (مثلاً ۱۹۲ ساعت)
+// PayrollSlip فیش حقوقی صادر شده (با تمامی ریز مبالغ)
+type PayrollSlip struct {
+	ID                 int          `json:"id"`
+	EmployeeCode       string       `json:"employee_code"`
+	Year               int          `json:"year"`
+	Month              int          `json:"month"`
+	ContractType       ContractType `json:"contract_type"`
+	ExpectedWorkHours  float64      `json:"expected_work_hours"`
+	ActualWorkHours    float64      `json:"actual_work_hours"`
+	OvertimeHours      float64      `json:"overtime_hours"`
+	BaseSalary         int64        `json:"base_salary"`
+	BonAllowance       int64        `json:"bon_allowance"`
+	HousingAllowance   int64        `json:"housing_allowance"`
+	MaritalAllowance   int64        `json:"marital_allowance"`
+	ChildAllowance     int64        `json:"child_allowance"`
+	SeniorityAllowance int64        `json:"seniority_allowance"`
+	OvertimeIncome     int64        `json:"overtime_income"`
+	GrossEarnings      int64        `json:"gross_earnings"`
+	InsuranceDeduction int64        `json:"insurance_deduction"`
+	LeaveDeficitHours  float64      `json:"leave_deficit_hours"`
+	TotalDeductions    int64        `json:"total_deductions"`
+	NetPayout          int64        `json:"net_payout"`
+	CreatedAt          time.Time    `json:"created_at"`
 }
 
-// CalculateSalary پیاده‌سازی فرمول قانون کار: اگر کارمند ساعت موظفی را پر کند حقوق کامل می‌گیرد، در غیر این صورت به نسبت کارکرد
-func (l LaborLawStrategy) CalculateSalary(totalHours float64) float64 {
-	if totalHours >= l.RequiredHours {
-		return l.BaseMonthlySalary
+// IssueMonthlyPayroll موتور هسته مرکزی محاسبه مالی خالص (فقط محاسبه می‌کند و دیتابیس را آپدیت نمی‌کند)
+func IssueMonthlyPayroll(ctx context.Context, employeeCode string, year, month int, actualHours, expectedHours, overtimeHours float64) (*PayrollSlip, error) {
+
+	// ۱. واکشی مقادیر پایه از تنظیمات سالانه
+	var cDailyBase, cDailySeniority, cMonthlyBon, cMonthlyHousing, cMonthlyMarital, cMonthlyChild int64
+	var cLeaveAccrual float64
+
+	queryConstants := `
+		SELECT daily_base_wage, daily_seniority, monthly_bon, monthly_housing, monthly_marital, monthly_child, monthly_leave_accrual 
+		FROM payroll_constants WHERE year = $1;`
+
+	errConst := database.DB.QueryRow(ctx, queryConstants, year).Scan(
+		&cDailyBase, &cDailySeniority, &cMonthlyBon, &cMonthlyHousing, &cMonthlyMarital, &cMonthlyChild, &cLeaveAccrual,
+	)
+	if errConst != nil {
+		return nil, fmt.Errorf("مقادیر پایه برای سال %d تعریف نشده است", year)
 	}
-	// محاسبه حقوق به نسبت ساعات کارکرد واقعی
-	return (totalHours / l.RequiredHours) * l.BaseMonthlySalary
-}
 
-func (l LaborLawStrategy) GetStrategyName() string {
-	return "قانون کار استاندارد (ماهانه مصوب)"
-}
+	// ۲. واکشی پروفایل مالی پرسنل
+	var profile EmployeeProfile
+	var cTypeStr string
+	queryProfile := `
+		SELECT contract_type, is_married, child_count, eligible_for_seniority, custom_overtime_rate, hourly_rate 
+		FROM employee_profiles WHERE employee_code = $1;`
 
-// -----------------------------------------------------------------
-// ۲. استراتژی دوم: قرارداد ساعتی (دستمزد مستقیم بر اساس میزان ساعت کارکرد)
-type HourlyStrategy struct {
-	RatePerHour float64 // دستمزد مصوب برای هر یک ساعت کار
-}
+	errProf := database.DB.QueryRow(ctx, queryProfile, employeeCode).Scan(
+		&cTypeStr, &profile.IsMarried, &profile.ChildCount, &profile.EligibleForSeniority, &profile.CustomOvertimeRate, &profile.HourlyRate,
+	)
+	if errProf != nil {
+		return nil, fmt.Errorf("مشخصات مالی نیرو تنظیم نشده است")
+	}
+	profile.ContractType = ContractType(cTypeStr)
 
-// CalculateSalary پیاده‌سازی فرمول ساعتی
-func (h HourlyStrategy) CalculateSalary(totalHours float64) float64 {
-	return totalHours * h.RatePerHour
-}
-
-func (h HourlyStrategy) GetStrategyName() string {
-	return "قرارداد ساعتی پروژه‌ای"
-}
-
-// -----------------------------------------------------------------
-// تابع اصلی ماژول حقوق و دستمزد برای استخراج ساعات از دیتابیس و محاسبه فیش حقوقی
-func RunPayrollCalculation(employeeCode string, yearMonth string, strategy SalaryCalculator) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	// استخراج مجموع ساعات کارکرد کارمند در آن ماه شمسی خاص از پایگاه داده
-	var totalHours float64
-	query := `
-		SELECT COALESCE(SUM(hours_spent), 0) 
-		FROM work_logs 
-		WHERE employee_code = $1 AND shamsi_date LIKE $2;
-	`
-	err := database.DB.QueryRow(ctx, query, employeeCode, yearMonth+"%").Scan(&totalHours)
-	if err != nil {
-		fmt.Printf("خطا در بازخوانی کارکرد برای محاسبه حقوق: %v\n", err)
-		return
+	// ۳. محاسبه کسر کارکرد
+	var leaveDeficit float64 = 0
+	if profile.ContractType == ContractRegular && actualHours < expectedHours {
+		leaveDeficit = expectedHours - actualHours
 	}
 
-	// استفاده داینامیک از اینترفیس برای محاسبه حقوق (بدون اینکه این تابع بداند فرمول چیست!)
-	finalSalary := strategy.CalculateSalary(totalHours)
+	// ۴. ساخت پیش‌نویس فیش
+	slip := &PayrollSlip{
+		EmployeeCode:      employeeCode,
+		Year:              year,
+		Month:             month,
+		ContractType:      profile.ContractType,
+		ExpectedWorkHours: expectedHours,
+		ActualWorkHours:   actualHours,
+		OvertimeHours:     overtimeHours,
+		LeaveDeficitHours: leaveDeficit,
+	}
 
-	// چاپ فیش حقوقی صادر شده بر اساس ماه‌های شمسی
-	fmt.Printf("\n==================================================\n")
-	fmt.Printf("🧾 فیش حقوقی سیستمی (دوره شمسی: %s)\n", yearMonth)
-	fmt.Printf("کارمند: %s\n", employeeCode)
-	fmt.Printf("نوع قرارداد محاسباتی: %s\n", strategy.GetStrategyName())
-	fmt.Printf("کل کارکرد ثبت شده: %.2f ساعت\n", totalHours)
-	fmt.Printf("💰 مبلغ قابل پرداخت: %.0f تومان\n", finalSalary)
-	fmt.Printf("==================================================\n")
+	if profile.ContractType == ContractRegular {
+		daysInMonth := 30
+		if month <= 6 {
+			daysInMonth = 31
+		} else if month == 12 {
+			daysInMonth = 29
+		}
+
+		slip.BaseSalary = cDailyBase * int64(daysInMonth)
+		slip.BonAllowance = cMonthlyBon
+		slip.HousingAllowance = cMonthlyHousing
+		if profile.IsMarried {
+			slip.MaritalAllowance = cMonthlyMarital
+		}
+		slip.ChildAllowance = cMonthlyChild * int64(profile.ChildCount)
+		if profile.EligibleForSeniority {
+			slip.SeniorityAllowance = cDailySeniority * int64(daysInMonth)
+		}
+		slip.OvertimeIncome = int64(overtimeHours) * profile.CustomOvertimeRate
+
+		slip.GrossEarnings = slip.BaseSalary + slip.BonAllowance + slip.HousingAllowance +
+			slip.MaritalAllowance + slip.ChildAllowance + slip.SeniorityAllowance + slip.OvertimeIncome
+
+		insuredEarnings := slip.BaseSalary + slip.BonAllowance + slip.HousingAllowance +
+			slip.MaritalAllowance + slip.SeniorityAllowance + slip.OvertimeIncome
+
+		slip.InsuranceDeduction = int64(math.Round(float64(insuredEarnings) * 0.07))
+		slip.TotalDeductions = slip.InsuranceDeduction
+		slip.NetPayout = slip.GrossEarnings - slip.TotalDeductions
+
+	} else if profile.ContractType == ContractHourly {
+		slip.BaseSalary = int64(actualHours) * profile.HourlyRate
+		slip.GrossEarnings = slip.BaseSalary
+		slip.InsuranceDeduction = 0
+		slip.TotalDeductions = 0
+		slip.NetPayout = slip.GrossEarnings
+	}
+
+	return slip, nil
 }

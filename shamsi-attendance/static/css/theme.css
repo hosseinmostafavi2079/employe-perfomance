@@ -455,3 +455,173 @@ table.dt tbody tr:last-child td{ border-bottom:none; }
 
 /* بازنویسی جزئی پلاگین تقویم جلالی برای هماهنگی رنگی */
 .jdp-container, .jdp-container *{ font-family:'IRANSansWeb', Tahoma, sans-serif !important; }
+
+
+/* ==========================================================================
+   Custom Searchable Dropdown (100% Local & Offline)
+   ========================================================================== */
+.select-search-wrapper {
+    position: relative;
+    width: 100%;
+}
+.select-search-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--surface-3, #1a1f2b);
+    border: 1px solid var(--border-strong, rgba(255,255,255,0.14));
+    color: var(--text, #fff);
+    padding: 10px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    min-height: 42px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.select-search-trigger:hover {
+    border-color: rgba(255,255,255,0.3);
+}
+.select-search-trigger::after {
+    content: "▼";
+    font-size: 10px;
+    color: var(--text-faint, #8a94a6);
+    margin-right: 10px;
+    transition: transform 0.2s ease;
+}
+.select-search-wrapper.open .select-search-trigger {
+    border-color: var(--indigo, #6366f1);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+.select-search-wrapper.open .select-search-trigger::after {
+    transform: rotate(180deg);
+}
+.select-search-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: #1a1f2b;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+}
+.select-search-wrapper.open .select-search-dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+.select-search-input {
+    margin: 8px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.select-search-input:focus {
+    border-color: var(--indigo, #6366f1);
+}
+.select-search-options {
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 0 8px 8px 8px;
+}
+.select-search-options::-webkit-scrollbar {
+    width: 6px;
+}
+.select-search-options::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+}
+.select-search-option {
+    padding: 10px 12px;
+    color: #cbd5e1;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 6px;
+    margin-bottom: 2px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.select-search-option:hover {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+}
+.select-search-option.selected {
+    background: var(--indigo, #6366f1);
+    color: #fff;
+    font-weight: bold;
+}
+.select-search-option.hidden {
+    display: none;
+}
+
+/* ==========================================================================
+   Avatar & File Upload Custom Styles
+   ========================================================================== */
+.dynamic-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.file-input-custom {
+    background: rgba(255,255,255,0.05);
+    border: 1px dashed rgba(255,255,255,0.2);
+    padding: 10px;
+    border-radius: 6px;
+    color: #fff;
+    width: 100%;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+.file-input-custom:hover {
+    border-color: var(--indigo, #6366f1);
+}
+.file-input-custom::file-selector-button {
+    background: var(--indigo, #6366f1);
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+    margin-left: 10px;
+    font-family: inherit;
+    font-weight: bold;
+}
+/* ==========================================================================
+   رفع تداخل لایه‌بندی دراپ‌دان‌های سفارشی (برطرف کردن بریدگی و سایز)
+   ========================================================================== */
+
+/* ۱. باز کردن قفل کادر کارت‌ها تا منوهای کشویی بریده نشوند */
+.card {
+    overflow: visible !important;
+}
+.table-wrap {
+    border-bottom-left-radius: var(--radius-lg);
+    border-bottom-right-radius: var(--radius-lg);
+}
+
+/* ۲. اصلاح عرض دراپ‌دان‌ها در فرم‌های خطی (جلوگیری از فشرده شدن) */
+.filter-form .select-search-wrapper {
+    width: auto !important;
+    min-width: 170px;
+    flex: 1;
+}
+
+/* ۳. بالا بردن اولویت لایه (z-index) دراپ‌دان باز شده تا زیر فیلدهای بعدی مخفی نشود */
+.select-search-wrapper.open {
+    z-index: 99999;
+}
