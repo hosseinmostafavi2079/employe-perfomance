@@ -658,6 +658,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 سیستم و پشتیبان‌گیری
             </button>
+            <button type="button" class="subtab-btn" data-subtab-btn="teams">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                تیم‌ها و گروه‌ها
+            </button>
         </div>
 
         <div class="mgmt-container-grid">
@@ -947,6 +951,59 @@
                     </form>
                 </div>
                 </div><!-- /staff -->
+                
+                <!-- بخش گروه‌ها / تیم‌ها (ستون سمت راست) -->
+                <div data-subtab-panel="teams">
+                    <div class="swiss-card">
+                        <div class="swiss-card__title-bar">
+                            <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--amber);"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            <span class="swiss-card__title">تعریف گروه / تیم جدید</span>
+                        </div>
+                        <form action="/admin/teams/create" method="POST" class="form">
+                            <input type="hidden" name="tab" value="management">
+                            <div class="field">
+                                <label>نام گروه (مثلاً تیم نرم‌افزار، تیم حسابداری)</label>
+                                <input type="text" name="name" placeholder="عنوان رسمی گروه" required>
+                            </div>
+                            <div class="field">
+                                <label>توضیحات گروه (اختیاری)</label>
+                                <input type="text" name="description" placeholder="توضیحات مختصر در مورد وظایف این تیم">
+                            </div>
+                            <button type="submit" class="btn btn-amber" style="width: 100%; justify-content: center;">➕ ثبت و ایجاد گروه سیستم</button>
+                        </form>
+                    </div>
+
+                    <div class="swiss-card" style="margin-top: 24px;">
+                        <div class="swiss-card__title-bar">
+                            <span class="swiss-card__title">فهرست گروه‌های سازمانی</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="dt">
+                                <thead>
+                                    <tr>
+                                        <th>نام گروه</th>
+                                        <th>توضیحات</th>
+                                        <th style="text-align:center;">عملیات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{range .Teams}}
+                                    <tr>
+                                        <td class="cell-strong">{{.Name}}</td>
+                                        <td class="text-faint">{{.Description}}</td>
+                                        <td class="cell-actions" style="text-align:center;">
+                                            <a href="/admin/teams/delete?id={{.ID}}&tab=management" onclick="return confirm('آیا از حذف این گروه مطمئن هستید؟ (هیچ پروژه‌ای حذف نخواهد شد)')" class="btn-link danger">حذف گروه</a>
+                                        </td>
+                                    </tr>
+                                    {{else}}
+                                    <tr class="empty-row"><td colspan="3">هیچ گروهی در سامانه ثبت نشده است.</td></tr>
+                                    {{end}}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div><!-- /teams (Right Column) -->
+
             </div>
 
             <div class="stack">
@@ -1194,6 +1251,74 @@
                     </form>
                 </div>
                 </div><!-- /staff -->
+                
+                <!-- تخصیص اعضا و پروژه‌ها به تیم‌ها (ستون سمت چپ) -->
+                <div data-subtab-panel="teams">
+                    <div class="swiss-card" style="border-top: 4px solid var(--emerald);">
+                        <div class="swiss-card__title-bar">
+                            <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--emerald);"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            <span class="swiss-card__title">عضویت پرسنل در تیم‌ها</span>
+                        </div>
+                        <form action="/admin/teams/assign-members" method="POST" class="form">
+                            <input type="hidden" name="tab" value="management">
+                            <div class="field">
+                                <label>۱. انتخاب گروه هدف</label>
+                                <select name="team_id" required>
+                                    <option value="">گروه را انتخاب کنید...</option>
+                                    {{range .Teams}}
+                                    <option value="{{.ID}}">{{.Name}}</option>
+                                    {{end}}
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>۲. انتخاب پرسنل مرتبط (تیک بزنید)</label>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; background: rgba(0,0,0,0.2); padding: 18px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); max-height: 200px; overflow-y: auto;">
+                                    {{range .Employees}}
+                                        {{if ne .Role "ADMIN"}}
+                                        <label style="display: flex; align-items: center; gap: 10px; color: #cbd5e1; cursor: pointer; font-size: 13px; background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03);">
+                                            <input type="checkbox" name="employee_codes" value="{{.EmployeeCode}}" style="width: 16px; height: 16px; accent-color: var(--emerald); cursor: pointer;">
+                                            {{.FullName}}
+                                        </label>
+                                        {{end}}
+                                    {{end}}
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="background: var(--emerald); border: none; width: 100%; justify-content: center;">تخصیص اعضا</button>
+                        </form>
+                    </div>
+
+                    <div class="swiss-card" style="margin-top: 24px; border-top: 4px solid var(--indigo);">
+                        <div class="swiss-card__title-bar">
+                            <svg class="swiss-card__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--indigo);"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            <span class="swiss-card__title">تخصیص پروژه‌ها به تیم‌ها</span>
+                        </div>
+                        <form action="/admin/teams/assign-projects" method="POST" class="form">
+                            <input type="hidden" name="tab" value="management">
+                            <div class="field">
+                                <label>۱. انتخاب گروه هدف</label>
+                                <select name="team_id" required>
+                                    <option value="">گروه را انتخاب کنید...</option>
+                                    {{range .Teams}}
+                                    <option value="{{.ID}}">{{.Name}}</option>
+                                    {{end}}
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>۲. پروژه‌های مجاز این گروه (تیک بزنید)</label>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; background: rgba(0,0,0,0.2); padding: 18px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); max-height: 200px; overflow-y: auto;">
+                                    {{range .Projects}}
+                                        <label style="display: flex; align-items: center; gap: 10px; color: #cbd5e1; cursor: pointer; font-size: 13px; background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03);">
+                                            <input type="checkbox" name="project_ids" value="{{.ID}}" style="width: 16px; height: 16px; accent-color: var(--indigo); cursor: pointer;">
+                                            {{.Name}}
+                                        </label>
+                                    {{end}}
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="background: var(--indigo); border: none; width: 100%; justify-content: center;">تخصیص پروژه‌ها</button>
+                        </form>
+                    </div>
+                </div><!-- /teams (Left Column) -->
+
             </div>
         </div>
         {{end}}

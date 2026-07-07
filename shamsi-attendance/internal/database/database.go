@@ -14,9 +14,8 @@ import (
 // DB متغیر عمومی دسترسی به دیتابیس داکر
 var DB *pgxpool.Pool
 
-// ConnectToDatabase برقراری اتصال امن با دیتابیس (پشتیبانی از هماهنگی محیط داکر و لوکال)
+// ConnectToDatabase برقراری اتصال امن با دیتابیس
 func ConnectToDatabase() {
-	// استفاده از متغیر محیطی در صورت وجود، در غیر این صورت بازگشت به مقدار پیش‌فرض پورت ۵۴۳۳
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
 		dsn = "postgres://attendance_admin:shamsi_secure_pass_2026@localhost:5433/shamsi_attendance_platform?sslmode=disable"
@@ -41,12 +40,11 @@ func ConnectToDatabase() {
 	CreateTables()
 }
 
-// CreateTables ساخت ساختار پیشرفته پرسنلی و مقداردهی اولیه ادمین امن
+// CreateTables ساخت ساختار پیشرفته پرسنلی و سیستم تیم‌بندی
 func CreateTables() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// ایجاد جداول پایه، حقوق، و جدول جدید بیومتریک
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS employees (
 			id SERIAL PRIMARY KEY,
@@ -55,15 +53,12 @@ func CreateTables() {
 			role VARCHAR(50) NOT NULL DEFAULT 'EMPLOYEE',
 			created_at TIMESTAMPTZ DEFAULT NOW()
 		);`,
-
 		`ALTER TABLE employees ADD COLUMN IF NOT EXISTS password VARCHAR(255) NOT NULL DEFAULT '123456';`,
-
 		`CREATE TABLE IF NOT EXISTS projects (
 			id SERIAL PRIMARY KEY,
 			name VARCHAR(255) UNIQUE NOT NULL,
 			created_at TIMESTAMPTZ DEFAULT NOW()
 		);`,
-
 		`CREATE TABLE IF NOT EXISTS attendance (
 			id SERIAL PRIMARY KEY,
 			employee_code VARCHAR(50) NOT NULL,
@@ -71,7 +66,6 @@ func CreateTables() {
 			check_out TIMESTAMPTZ,
 			shamsi_date VARCHAR(10) NOT NULL
 		);`,
-
 		`CREATE TABLE IF NOT EXISTS work_logs (
 			id SERIAL PRIMARY KEY,
 			employee_code VARCHAR(50) NOT NULL,
@@ -80,7 +74,6 @@ func CreateTables() {
 			description TEXT,
 			shamsi_date VARCHAR(10) NOT NULL
 		);`,
-
 		`CREATE TABLE IF NOT EXISTS employee_profiles (
 			id SERIAL PRIMARY KEY,
 			employee_code VARCHAR(50) UNIQUE NOT NULL REFERENCES employees(employee_code) ON DELETE CASCADE,
@@ -93,7 +86,6 @@ func CreateTables() {
 			remaining_leave_hours NUMERIC(6,2) DEFAULT 0.0,
 			created_at TIMESTAMPTZ DEFAULT NOW()
 		);`,
-
 		`CREATE TABLE IF NOT EXISTS payroll_slips (
 			id SERIAL PRIMARY KEY,
 			employee_code VARCHAR(50) NOT NULL REFERENCES employees(employee_code) ON DELETE CASCADE,
@@ -115,8 +107,6 @@ func CreateTables() {
 			net_payout BIGINT NOT NULL,
 			created_at TIMESTAMPTZ DEFAULT NOW()
 		);`,
-
-		// 🚨 جدول جدید اختصاصی برای سنسورهای اثر انگشت و چهره (بدون دست‌خوردگی به دیتای قبلی)
 		`CREATE TABLE IF NOT EXISTS user_biometrics (
 			id SERIAL PRIMARY KEY,
 			employee_code VARCHAR(50) NOT NULL REFERENCES employees(employee_code) ON DELETE CASCADE,
@@ -126,6 +116,26 @@ func CreateTables() {
 			sign_count BIGINT DEFAULT 0,
 			aaguid BYTEA,
 			created_at TIMESTAMPTZ DEFAULT NOW()
+		);`,
+
+		// ============================================
+		// 🚨 جداول جدید برای ماژول تیم‌بندی (GBAC)
+		// ============================================
+		`CREATE TABLE IF NOT EXISTS teams (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(255) UNIQUE NOT NULL,
+			description TEXT,
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		);`,
+		`CREATE TABLE IF NOT EXISTS employee_teams (
+			employee_code VARCHAR(50) NOT NULL REFERENCES employees(employee_code) ON DELETE CASCADE,
+			team_id INT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+			PRIMARY KEY (employee_code, team_id)
+		);`,
+		`CREATE TABLE IF NOT EXISTS team_projects (
+			team_id INT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+			project_id INT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+			PRIMARY KEY (team_id, project_id)
 		);`,
 	}
 
@@ -140,12 +150,10 @@ func CreateTables() {
 	if adminUser == "" {
 		adminUser = "SUPER_ADMIN"
 	}
-
 	adminPass := os.Getenv("INITIAL_ADMIN_PASS")
 	if adminPass == "" {
 		adminPass = "shamsi_admin_password"
 	}
-
 	adminHash, _ := bcrypt.GenerateFromPassword([]byte(adminPass), bcrypt.DefaultCost)
 
 	seedQuery := `
@@ -157,14 +165,8 @@ func CreateTables() {
 			role = EXCLUDED.role,
 			full_name = EXCLUDED.full_name;
 	`
-
 	_, err := DB.Exec(ctx, seedQuery, adminUser, "مدیر کل سیستم ارشد", string(adminHash))
 	if err != nil {
 		log.Printf("⚠️ خطا در ست کردن اطلاعات مدیر ارشد پایه: %v\n", err)
 	}
-
-	fmt.Println("--------------------------------------------------")
-	fmt.Println("🔑 اطلاعات ورود مجاز به سیستم:")
-	fmt.Printf("   پورتال مدیر: نام کاربری [%s] | رمز عبور [%s]\n", adminUser, adminPass)
-	fmt.Println("--------------------------------------------------")
 }

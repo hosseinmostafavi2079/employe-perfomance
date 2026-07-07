@@ -150,6 +150,12 @@ type ProjectView struct {
 	Name string
 }
 
+type TeamView struct {
+	ID          int
+	Name        string
+	Description string
+}
+
 type FinancialProfileView struct {
 	EmployeeCode         string
 	ContractType         string
@@ -245,6 +251,7 @@ type PageData struct {
 	AttendanceLogs          []AttendanceView
 	Employees               []EmployeeView
 	Projects                []ProjectView
+	Teams                   []TeamView
 	EditLog                 *WorkLogView
 	EditAttendanceLog       *AttendanceView
 	TotalAttendanceMonthStr string
@@ -424,6 +431,11 @@ func main() {
 	http.HandleFunc("/admin/create-project", handleCreateProject)
 	http.HandleFunc("/admin/edit-project", handleEditProject)
 	http.HandleFunc("/admin/delete-project", handleDeleteProject)
+
+	http.HandleFunc("/admin/teams/create", handleCreateTeam)
+	http.HandleFunc("/admin/teams/delete", handleDeleteTeam)
+	http.HandleFunc("/admin/teams/assign-members", handleAssignTeamMembers)
+	http.HandleFunc("/admin/teams/assign-projects", handleAssignTeamProjects)
 
 	http.HandleFunc("/biometric/register/begin", biometric.HandleRegisterBegin)
 	http.HandleFunc("/biometric/register/finish", biometric.HandleRegisterFinish)
@@ -1364,7 +1376,20 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	if role == "ADMIN" {
 		pQuery = "SELECT id, name FROM projects ORDER BY id ASC;"
 	} else {
-		pQuery = "SELECT p.id, p.name FROM projects p JOIN employee_projects ep ON p.id = ep.project_id WHERE ep.employee_code = $1 ORDER BY p.id ASC;"
+		// GBAC: Query for user projects (direct + team assignments)
+		pQuery = `
+			SELECT id, name FROM (
+				SELECT p.id, p.name FROM projects p 
+				JOIN employee_projects ep ON p.id = ep.project_id 
+				WHERE ep.employee_code = $1
+				
+				UNION
+				
+				SELECT p.id, p.name FROM projects p
+				JOIN team_projects tp ON p.id = tp.project_id
+				JOIN employee_teams et ON tp.team_id = et.team_id
+				WHERE et.employee_code = $1
+			) as combined ORDER BY id ASC;`
 		pArgs = append(pArgs, username)
 	}
 
@@ -1376,6 +1401,22 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 			errScan := pRows.Scan(&pv.ID, &pv.Name)
 			if errScan == nil {
 				projects = append(projects, pv)
+			}
+		}
+	}
+
+	// GBAC: Fetch teams for admin panel
+	var teams []TeamView
+	if role == "ADMIN" {
+		tRows, errT := database.DB.Query(ctx, "SELECT id, name, COALESCE(description, '') FROM teams ORDER BY id ASC")
+		if errT == nil && tRows != nil {
+			defer tRows.Close()
+			for tRows.Next() {
+				var t TeamView
+				errScan := tRows.Scan(&t.ID, &t.Name, &t.Description)
+				if errScan == nil {
+					teams = append(teams, t)
+				}
 			}
 		}
 	}
@@ -1403,6 +1444,7 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 		AttendanceLogs:          attLogs,
 		Employees:               employees,
 		Projects:                projects,
+		Teams:                   teams,
 		EditLog:                 editLog,
 		EditAttendanceLog:       editAttLog,
 		TotalAttendanceMonthStr: FormatDuration(totalAttendanceHours),
@@ -1986,5 +2028,83 @@ func handleManualBackup(w http.ResponseWriter, r *http.Request) {
 		setFlashMessage(w, "✅ عملیات موفق: نسخه پشتیبان با نام ("+fileName+") در پوشه backups ذخیره شد.")
 	}
 	
+	http.Redirect(w, r, "/?tab=management", http.StatusSeeOther)
+}
+
+// ==========================================
+// 7. GBAC - Team & Department Handlers
+// ==========================================
+
+func handleCreateTeam(w http.ResponseWriter, r *http.Request) {
+	_, role := getAuthenticatedUser(r)
+	if role != "ADMIN" { return }
+
+	if r.Method == http.MethodPost {
+		name := strings.TrimSpace(r.FormValue("name"))
+		desc := strings.TrimSpace(r.FormValue("description"))
+		if name != "" {
+			_, err := database.DB.Exec(context.Background(), "INSERT INTO teams (name, description) VALUES ($1, $2) ON CONFLICT DO NOTHING;", name, desc)
+			if err != nil {
+				setFlashMessage(w, "❌ خطا: "+err.Error())
+			} else {
+				setFlashMessage(w, "✅ گروه کاری جدید با موفقیت ایجاد شد.")
+			}
+		}
+	}
+	http.Redirect(w, r, "/?tab=management", http.StatusSeeOther)
+}
+
+func handleDeleteTeam(w http.ResponseWriter, r *http.Request) {
+	_, role := getAuthenticatedUser(r)
+	if role != "ADMIN" { return }
+
+	id, errConv := strconv.Atoi(r.URL.Query().Get("id"))
+	if errConv == nil {
+		_, err := database.DB.Exec(context.Background(), "DELETE FROM teams WHERE id = $1;", id)
+		if err == nil {
+			setFlashMessage(w, "✅ گروه حذف شد. هیچ کارمندی حذف نشد.")
+		} else {
+			setFlashMessage(w, "❌ خطا در حذف گروه")
+		}
+	}
+	http.Redirect(w, r, "/?tab=management", http.StatusSeeOther)
+}
+
+func handleAssignTeamMembers(w http.ResponseWriter, r *http.Request) {
+	_, role := getAuthenticatedUser(r)
+	if role != "ADMIN" { return }
+
+	if r.Method == http.MethodPost {
+		teamID, _ := strconv.Atoi(r.FormValue("team_id"))
+		empCodes := r.Form["employee_codes"]
+		
+		ctx := context.Background()
+		database.DB.Exec(ctx, "DELETE FROM employee_teams WHERE team_id = $1;", teamID)
+		
+		for _, code := range empCodes {
+			database.DB.Exec(ctx, "INSERT INTO employee_teams (employee_code, team_id) VALUES ($1, $2);", code, teamID)
+		}
+		setFlashMessage(w, "✅ اعضای گروه با موفقیت بروزرسانی شدند.")
+	}
+	http.Redirect(w, r, "/?tab=management", http.StatusSeeOther)
+}
+
+func handleAssignTeamProjects(w http.ResponseWriter, r *http.Request) {
+	_, role := getAuthenticatedUser(r)
+	if role != "ADMIN" { return }
+
+	if r.Method == http.MethodPost {
+		teamID, _ := strconv.Atoi(r.FormValue("team_id"))
+		projectIDs := r.Form["project_ids"]
+		
+		ctx := context.Background()
+		database.DB.Exec(ctx, "DELETE FROM team_projects WHERE team_id = $1;", teamID)
+		
+		for _, pidStr := range projectIDs {
+			pid, _ := strconv.Atoi(pidStr)
+			database.DB.Exec(ctx, "INSERT INTO team_projects (team_id, project_id) VALUES ($1, $2);", teamID, pid)
+		}
+		setFlashMessage(w, "✅ پروژه‌های اختصاصی این گروه با موفقیت تنظیم شدند.")
+	}
 	http.Redirect(w, r, "/?tab=management", http.StatusSeeOther)
 }
