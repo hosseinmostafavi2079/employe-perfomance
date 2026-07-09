@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پیام‌رسان و موزیک سازمانی</title>
+    <link rel="stylesheet" href="/static/css/chat.css?v=9.0">
+</head>
+<body>
+    <div class="ms-layout">
+        <aside class="ms-sidebar">
+            <div class="ms-sidebar-header">
+                <div class="ms-my-profile">
+                    {{if .CurrentAvatar}}<img src="{{.CurrentAvatar}}" alt="Avatar">{{else}}<div class="ms-avatar-placeholder">👤</div>{{end}}
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-size:14px; font-weight:bold; color:#fff;">{{.CurrentFullName}}</span>
+                        <span style="font-size:11px; color:#38bdf8;">آنلاین</span>
+                    </div>
+                </div>
+                <a href="/" class="ms-btn-back" title="بازگشت به داشبورد">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                </a>
+            </div>
+            
+            <div class="ms-tabs">
+                <div class="ms-tab active" onclick="switchLeftTab('chats')">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                    گفتگوها
+                </div>
+                <div class="ms-tab" onclick="switchLeftTab('contacts')">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    پرسنل
+                </div>
+                <div class="ms-tab" onclick="openMusicView()">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                    موزیک
+                </div>
+            </div>
+
+            <div class="ms-sidebar-content">
+                <div id="left-chats" class="ms-list-pane active"></div>
+                <div id="left-contacts" class="ms-list-pane"></div>
+            </div>
+        </aside>
+
+        <main class="ms-view-area">
+            
+            <div id="view-chat" class="ms-view hidden">
+                <header class="ms-chat-header">
+                    <div id="active-chat-avatar" class="ms-avatar-placeholder">...</div>
+                    <strong id="active-chat-name" style="font-size:16px;">نام کاربر</strong>
+                </header>
+                <div id="chat-messages" class="ms-chat-messages"></div>
+                <div class="ms-chat-input-area">
+                    <button class="ms-attach-btn" onclick="document.getElementById('chat-file-input').click()" title="ارسال فایل">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                    </button>
+                    <input type="text" id="chat-input" placeholder="پیام خود را بنویسید..." onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                    <button class="ms-send-btn" onclick="sendChatMessage()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    </button>
+                    <input type="file" id="chat-file-input" style="display:none;">
+                </div>
+            </div>
+
+            <div id="view-music" class="ms-view hidden" style="background: #0b0d14;">
+                <div class="music-content-area">
+                    
+                    <div class="music-hero">
+                        <div class="music-hero-text">
+                            <h1>موزیک‌های سازمانی</h1>
+                            <p>پلی‌لیست مشترک و لحظه‌ای پرسنل سازمان</p>
+                        </div>
+                    </div>
+
+                    <div class="music-action-bar">
+                        <div class="music-search">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" width="20" height="20"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <input type="text" id="music-search-input" placeholder="جستجوی نام آهنگ یا آلبوم..." oninput="searchMusic(this.value)">
+                        </div>
+                        
+                        <div class="music-upload-group">
+                            <div class="album-input-wrapper">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" width="18" height="18"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                                <input type="text" id="upload-album-name" list="album-list-options" placeholder="انتخاب یا ایجاد آلبوم..." class="album-input-field" title="جهت دسته‌بندی، آلبوم را انتخاب کنید">
+                                <datalist id="album-list-options"></datalist>
+                            </div>
+                            <button class="sp-btn-primary" onclick="document.getElementById('audio-upload').click()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                آپلود آهنگ
+                            </button>
+                        </div>
+                    </div>
+
+                    <h3 style="font-size:16px; color:#fff; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:10px;">آلبوم‌ها و دسته‌بندی‌ها</h3>
+                    <div id="playlist-cards-container" class="album-grid"></div>
+                    
+                    <h3 id="current-album-title" style="font-size:16px; color:#fff; margin-bottom:15px; margin-top:10px;">همه آهنگ‌ها</h3>
+                    <div class="music-table-header">
+                        <div style="flex:0.5;">#</div>
+                        <div style="flex:4;">نام آهنگ</div>
+                        <div style="flex:2;">آلبوم</div>
+                        <div style="flex:1; text-align: left;">پخش</div>
+                    </div>
+                    <div id="server-playlist" class="music-playlist-items"></div>
+                </div>
+
+                <div class="music-bottom-dock">
+                    <div class="dock-track-info">
+                        <div class="dock-art">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                        </div>
+                        <div class="dock-meta">
+                            <strong id="now-playing-text">هیچ آهنگی در حال پخش نیست</strong>
+                            <span id="now-playing-album">آماده پخش...</span>
+                        </div>
+                    </div>
+
+                    <div class="dock-player-core">
+                        <div class="dock-controls">
+                            <button class="d-btn" onclick="toggleShuffle()" id="btn-shuffle" title="پخش تصادفی">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+                            </button>
+                            <button class="d-btn" onclick="playPrevTrack()">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                            </button>
+                            <button class="d-btn-play" id="btn-play-pause" onclick="togglePlayPause()">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28" id="icon-play-solid"><path d="M8 5v14l11-7z"/></svg>
+                            </button>
+                            <button class="d-btn" onclick="playNextTrack()">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                            </button>
+                            <button class="d-btn" onclick="toggleSoloMode()" id="btn-solo" title="تکی/گروهی">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                            </button>
+                        </div>
+                        <div class="dock-progress-area">
+                            <span id="player-time-current" class="tabular">00:00</span>
+                            <div class="dock-progress-wrapper">
+                                <input type="range" id="audio-progress" class="dock-progress-slider" value="0" min="0" max="100" step="0.1">
+                                <div class="dock-progress-filled" id="progress-filled"></div>
+                            </div>
+                            <span id="player-time-total" class="tabular">00:00</span>
+                        </div>
+                    </div>
+
+                    <div class="dock-actions">
+                        <button class="d-join-btn" id="join-audio-btn" onclick="joinAudioSync()" style="display:none;">پیوستن به زنده</button>
+                    </div>
+                </div>
+
+                <input type="file" id="audio-upload" style="display:none;" accept="audio/mp3, audio/wav, audio/ogg">
+                <audio id="shared-audio" style="display: none;"></audio>
+            </div>
+
+            <div id="view-empty" class="ms-view active">
+                <div class="ms-empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                    جهت شروع، یک گفتگو را انتخاب کنید و یا وارد موزیک سازمان شوید.
+                </div>
+            </div>
+
+            <div id="edit-album-modal" class="ms-modal-overlay" style="display:none;">
+                <div class="ms-modal-box">
+                    <h3 style="margin-top:0; color:#fff; font-size:18px;">تغییر آلبوم آهنگ</h3>
+                    <p id="edit-modal-track-name" style="color:#94a3b8; font-size:13px; margin-bottom:20px; word-break:break-all;"></p>
+                    <input type="hidden" id="edit-modal-old-album">
+                    <input type="hidden" id="edit-modal-file-name">
+                    
+                    <label style="font-size:12px; color:#94a3b8; margin-bottom:8px; display:block;">نام آلبوم جدید (تایپ کنید یا انتخاب کنید):</label>
+                    <input type="text" id="edit-modal-new-album" class="album-input-field" list="album-list-options" placeholder="مثلا: راک، سنتی، پادکست..." style="width:100%;">
+                    
+                    <div style="display:flex; gap:10px; margin-top:25px;">
+                        <button class="sp-btn-primary" onclick="submitMoveAudio()" style="flex:1;">ذخیره و انتقال</button>
+                        <button class="sp-btn-outline" onclick="closeEditModal()" style="width:auto; padding:12px 24px; border-radius:99px; background:transparent; border:1px solid #9ca3af; color:#fff; cursor:pointer;">لغو</button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="/static/js/chat.js?v=9.0"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            initChat("{{.CurrentUser}}", "{{.CurrentFullName}}", "{{.CurrentAvatar}}");
+        });
+    </script>
+</body>
+</html>

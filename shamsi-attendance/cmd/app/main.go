@@ -22,6 +22,7 @@ import (
 	"shamsi_attendance/internal/database"
 	"shamsi_attendance/internal/payroll"
 	"shamsi_attendance/internal/project"
+	"shamsi_attendance/internal/chat"
 
 	"github.com/xuri/excelize/v2"
 	"golang.org/x/crypto/bcrypt"
@@ -341,6 +342,17 @@ func main() {
 		defer database.DB.Close()
 	}
 
+	// ---------------------------------------------------------
+	// 🚀 استقرار ماژول چت (فاز 1: بررسی و ساخت جداول به صورت افزایشی)
+	// ---------------------------------------------------------
+	if database.DB != nil {
+		errChat := chat.InitChatTables()
+		chat.InitHub()
+		if errChat != nil {
+			log.Printf("⚠️ هشدار: خطای دیتابیس در ماژول چت (سیستم به کار خود ادامه میدهد): %v", errChat)
+		}
+	}
+
 	// 🚨 اجرای ماژول بکاپ اتوماتیک در پس‌زمینه بدون مسدود کردن سرور (Zero Downtime)
 	backup.StartScheduledBackups()
 
@@ -349,6 +361,12 @@ func main() {
 	err := os.MkdirAll("static/uploads/profiles", os.ModePerm)
 	if err != nil {
 		log.Printf("Warning: Failed to create uploads directory: %v", err)
+	}
+
+	// ایجاد پوشه برای فایل های صوتی و مدیای چت (مستقل از دیتابیس)
+	errMedia := os.MkdirAll("static/uploads/chat_media", os.ModePerm)
+	if errMedia != nil {
+		log.Printf("Warning: Failed to create chat_media directory: %v", errMedia)
 	}
 
 	errBio := biometric.InitWebAuthn()
@@ -415,6 +433,12 @@ func main() {
 	http.HandleFunc("/delete-attendance", handleDeleteAttendance)
 	http.HandleFunc("/export", handleExportExcel)
 
+	http.HandleFunc("/chat/upload-audio", chat.UploadAudio)
+	http.HandleFunc("/chat/playlist", chat.GetServerPlaylist)
+	http.HandleFunc("/chat/upload-file", chat.UploadChatMedia)
+	http.HandleFunc("/chat/delete-message", chat.DeleteMessageAPI)
+	http.HandleFunc("/chat/move-audio", chat.MoveAudio)
+
 	http.HandleFunc("/update-my-profile", handleUpdateMyProfile)
 
 	http.HandleFunc("/admin/save-payroll-constants", handleSavePayrollConstants)
@@ -442,8 +466,64 @@ func main() {
 	http.HandleFunc("/biometric/login/begin", biometric.HandleLoginBegin)
 	http.HandleFunc("/biometric/login/finish", biometric.HandleLoginFinish)
 
-	// <--- روت مربوط به بکاپ دستی اضافه شد
+	// روت مربوط به بکاپ دستی
 	http.HandleFunc("/admin/backup/manual", handleManualBackup)
+
+	http.HandleFunc("/chat/contacts", func(w http.ResponseWriter, r *http.Request) {
+		username, _ := getAuthenticatedUser(r)
+		if username == "" { http.Error(w, "Unauthorized", http.StatusUnauthorized); return }
+		chat.GetContacts(w, r)
+	})
+	http.HandleFunc("/chat/rooms", func(w http.ResponseWriter, r *http.Request) {
+		username, _ := getAuthenticatedUser(r)
+		if username == "" { http.Error(w, "Unauthorized", http.StatusUnauthorized); return }
+		chat.GetUserRooms(w, r)
+	})
+	http.HandleFunc("/chat/create-room", func(w http.ResponseWriter, r *http.Request) {
+		username, _ := getAuthenticatedUser(r)
+		if username == "" { http.Error(w, "Unauthorized", http.StatusUnauthorized); return }
+		chat.CreateRoom(w, r)
+	})
+	http.HandleFunc("/chat/ws", func(w http.ResponseWriter, r *http.Request) {
+		username, _ := getAuthenticatedUser(r)
+		if username == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		chat.ServeWS(w, r, username)
+	})
+	// 🚀 روت اختصاصی و تمام صفحه پیام‌رسان سازمانی
+	http.HandleFunc("/messenger", func(w http.ResponseWriter, r *http.Request) {
+		username, role := getAuthenticatedUser(r)
+		if username == "" {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+		var fullName, avatar string
+		// 🛠️ اصلاح باگ خواندن نام از دیتابیس
+		query := `SELECT e.full_name, COALESCE(ep.avatar_path, '') 
+				  FROM employees e LEFT JOIN employee_profiles ep ON e.employee_code = ep.employee_code 
+				  WHERE e.employee_code = $1`
+		database.DB.QueryRow(context.Background(), query, username).Scan(&fullName, &avatar)
+		
+		tmpl, err := template.ParseFiles("templates/messenger.html")
+		if err != nil {
+			http.Error(w, "Error loading messenger template: "+err.Error(), 500)
+			return
+		}
+		data := map[string]string{ "CurrentUser": username, "CurrentFullName": fullName, "CurrentAvatar": avatar, "Role": role }
+		tmpl.Execute(w, data)
+	})
+
+	http.HandleFunc("/chat/history", func(w http.ResponseWriter, r *http.Request) {
+		username, _ := getAuthenticatedUser(r)
+		if username == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		chat.GetChatHistory(w, r)
+	})
+	// --------------------------------
 
 	fmt.Println("🚀 وب‌سرور هوشمند با موفقیت روی پورت 8085 روشن شد!")
 	log.Fatal(http.ListenAndServe(":8085", nil))
